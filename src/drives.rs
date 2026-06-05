@@ -82,7 +82,7 @@ impl Drives {
             if drive_mask & 1 != 0 {
                 let path_str = format!(r"{drive_letter}:\");
                 let path = Path::new(&path_str);
-                let path_u16 = path.to_wide_vec_with_null();
+                let path_u16 = path.to_wide_vec_with_nul();
                 let drive_type = unsafe { GetDriveTypeW(PCWSTR(path_u16.as_ptr())) };
                 if drive_type == DRIVE_REMOTE {
                     // Use `fs::canonicalize` to match the expected inputs.

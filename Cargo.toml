@@ -2,6 +2,16 @@
 name = "simple-unc"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.88"
+description = "Simplify Windows UNC path for `fs::canonicalize`"
+authors = ["Koji Ishii <kojiishi@gmail.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/kojiishi/simple-unc"
+documentation = "https://docs.rs/simple-unc/"
+readme = "README.md"
+keywords = ["path", "UNC", "windows"]
+categories = ["development-tools"]
+exclude = [".github", ".gitignore", ".vscode", "Taskfile.yml"]
 
 [dependencies]
 anyhow = "1.0.102"
