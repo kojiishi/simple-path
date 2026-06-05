@@ -1,3 +1,14 @@
+[![CI-badge]][CI]
+[![crate-badge]][crate]
+[![docs-badge]][docs]
+
+[CI-badge]: https://github.com/kojiishi/simple-unc/actions/workflows/rust-ci.yml/badge.svg
+[CI]: https://github.com/kojiishi/simple-unc/actions/workflows/rust-ci.yml
+[crate-badge]: https://img.shields.io/crates/v/simple-unc.svg
+[crate]: https://crates.io/crates/simple-unc
+[docs-badge]: https://docs.rs/simple-unc/badge.svg
+[docs]: https://docs.rs/simple-unc/
+
 # SimpleUnc
 
 On Windows,
@@ -70,6 +81,10 @@ to normalize some other cases, such as:
 to:
 ```
 C:\foo
+```
+You can skip the [`dunce`] simplification if you prefer:
+```rust
+let unc = SimpleUnc { skip_dunce: true, ..Default::default() };
 ```
 
 [`dunce`]: https://crates.io/crates/dunce
