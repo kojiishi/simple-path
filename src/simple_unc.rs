@@ -7,21 +7,55 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// Simplifies [Win32 File Namespaces] paths (the "`\\?\`" prefix)
+/// for better readability and compatibility.
+///
+/// ```no_run
+/// # use simple_unc::SimpleUnc;
+/// # let path = "";
+/// SimpleUnc::default().canonicalize(path);
+/// ```
+/// is a snap-in replacement of [`fs::canonicalize`].
+///
+/// | | `C:\dir` | `Z:\x` (network) |
+/// | --- | --- | --- |
+/// | [`fs::canonicalize`] | `\\?\C:\dir` | `\\?\UNC\server\share\x` |
+/// | `SimpleUnc` | `C:\dir` | `\\server\share\x` |
+/// | `SimpleUnc` with [`map_to_drive`] | `C:\dir` | `Z:\x` |
+///
+/// [`map_to_drive`]: `SimpleUnc::map_to_drive`
+/// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
 #[derive(Default)]
 pub struct SimpleUnc {
     /// Map to the network share drive when possible.
     /// ```
     /// # use simple_unc::SimpleUnc;
+    /// # fn test() -> std::io::Result<()> {
     /// let path = "file.txt";
     /// let unc = SimpleUnc { map_to_drive: true, ..Default::default() };
-    /// let canonicalized = unc.canonicalize(path);
+    /// let canonicalized = unc.canonicalize(path)?;
+    /// # Ok(())
+    /// # }
     /// ```
     /// If the `file.txt` is in a network drive,
-    /// the result should be `Z:\dir\file.txt`
+    /// the result is `Z:\dir\file.txt`
     /// instead of `\\server\share\dir\file.txt`.
+    ///
+    /// The following code tries to preserve the original form of the `path`.
+    /// ```
+    /// # use simple_unc::SimpleUnc;
+    /// # fn test(path: &std::path::Path) -> std::io::Result<()> {
+    /// SimpleUnc {
+    ///     map_to_drive: !path.as_os_str().as_encoded_bytes().starts_with(br"\\"),
+    ///     ..Default::default()
+    /// }.canonicalize(path)?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub map_to_drive: bool,
 
-    /// Skip the [`dunce`] crate simplification.
+    /// The [`dunce`] simplification is applied by default.
+    /// Set to `true` to skip it.
     ///
     /// [`dunce`]: https://crates.io/crates/dunce
     pub skip_dunce: bool,
@@ -36,6 +70,13 @@ pub struct SimpleUnc {
 }
 
 impl SimpleUnc {
+    /// Calls [`fs::canonicalize`] and [`simplify`].
+    ///
+    /// On other platforms than Windows,
+    /// this is equivalent to [`fs::canonicalize`].
+    ///
+    /// [`fs::canonicalize`]: https://doc.rust-lang.org/std/fs/fn.canonicalize.html
+    /// [`simplify`]: SimpleUnc::simplify
     pub fn canonicalize(&self, path: impl AsRef<Path>) -> io::Result<PathBuf> {
         let canonicalized = fs::canonicalize(path)?;
         #[cfg(windows)]
@@ -45,6 +86,11 @@ impl SimpleUnc {
         Ok(canonicalized)
     }
 
+    /// Try to simplify the given `path`.
+    ///
+    /// Returns `Ok(None)`
+    /// if no simplification is applied,
+    /// or on other platforms than Windows.
     pub fn simplify<'a>(&self, path: &'a Path) -> io::Result<Option<Cow<'a, Path>>> {
         #[cfg(windows)]
         return self._simplify(path).map_err(io_error_from_anyhow);

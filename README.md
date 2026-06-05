@@ -26,6 +26,12 @@ PowerShell and `cmd.exe` are examples of such programs.
 The `SimpleUnc` simplifies network share UNC paths
 so that these programs can handle.
 
+| | `C:\dir` | `Z:\x` (network) |
+| --- | --- | --- |
+| [`fs::canonicalize`] | `\\?\C:\dir` | `\\?\UNC\server\share\x` |
+| `SimpleUnc` | `C:\dir` | `\\server\share\x` |
+| `SimpleUnc` with [`map_to_drive`] | `C:\dir` | `Z:\x` |
+
 Since the simplification may not always be safe,
 it does so if they are currently mapped to drives.
 
@@ -87,6 +93,15 @@ You can skip the [`dunce`] simplification if you prefer:
 let unc = SimpleUnc { skip_dunce: true, ..Default::default() };
 ```
 
+## Other Platforms
+
+On other platforms,
+the `SimpleUnc` returns without doing anything.
+
+You can wrap the calls with `#[cfg(windows)]` if you prefer,
+though it's not necessary to build and run.
+
 [`dunce`]: https://crates.io/crates/dunce
 [`fs::canonicalize`]: https://doc.rust-lang.org/std/fs/fn.canonicalize.html
+[`map_to_drive`]: https://docs.rs/simple-unc/latest/simple_unc/struct.SimpleUnc.html#structfield.map_to_drive
 [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces

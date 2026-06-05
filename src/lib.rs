@@ -1,3 +1,8 @@
+//! Please see the [README] for a high-level overview,
+//! and the [`SimpleUnc`] struct for the detailed features.
+//!
+//! [README]: https://github.com/kojiishi/simple-unc
+
 #[cfg(windows)]
 mod drive_path;
 #[cfg(windows)]
