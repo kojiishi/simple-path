@@ -6,11 +6,16 @@ use std::{
 const WIN32_FILE_NAMESPACE_UNC: &[u8] = br"\\?\unc\";
 
 pub(crate) trait PathExt {
-    /// Check or strip [Win32 File Namespaces].
+    /// Check if the `path` is the [Win32 File Namespaces].
     ///
     /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
     fn is_win32_file_namespace_unc(&self) -> bool;
-    fn strip_win32_file_namespace_unc(&self) -> Option<PathBuf>;
+
+    /// Convert the [Win32 File Namespaces] to UNC.
+    ///
+    /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
+    fn unc_from_win32_file_namespace(&self) -> Option<PathBuf>;
+
     fn to_wide_vec_with_nul(&self) -> Vec<u16>;
 }
 
@@ -22,7 +27,7 @@ impl PathExt for Path {
             .starts_with(WIN32_FILE_NAMESPACE_UNC)
     }
 
-    fn strip_win32_file_namespace_unc(&self) -> Option<PathBuf> {
+    fn unc_from_win32_file_namespace(&self) -> Option<PathBuf> {
         if self.is_win32_file_namespace_unc() {
             let bytes = self.as_os_str().as_encoded_bytes();
             let mut result_bytes =
@@ -57,12 +62,12 @@ mod tests {
     }
 
     #[test]
-    fn strip_win32_file_namespace_unc() {
+    fn unc_from_win32_file_namespace() {
         assert_eq!(
-            Path::new(r"\\?\UNC\server\share\dir").strip_win32_file_namespace_unc(),
+            Path::new(r"\\?\UNC\server\share\dir").unc_from_win32_file_namespace(),
             Some(PathBuf::from(r"\\server\share\dir"))
         );
-        assert_eq!(Path::new(r"C:\foo").strip_win32_file_namespace_unc(), None);
+        assert_eq!(Path::new(r"C:\foo").unc_from_win32_file_namespace(), None);
     }
 
     #[test]

@@ -45,8 +45,8 @@ impl SimpleUnc {
                 if self.map_to_drive {
                     return Ok(Some(Cow::Owned(drive_path.to_path_buf())));
                 }
-                if let Some(stripped) = path.strip_win32_file_namespace_unc() {
-                    return Ok(Some(Cow::Owned(stripped)));
+                if let Some(unc) = path.unc_from_win32_file_namespace() {
+                    return Ok(Some(Cow::Owned(unc)));
                 }
             }
 
