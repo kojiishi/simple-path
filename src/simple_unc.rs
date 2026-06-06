@@ -43,7 +43,7 @@ pub struct SimpleUnc {
     /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
     pub allow_long: bool,
 
-    /// Map to the network share drive when possible.
+    /// Map to network share drive names when possible.
     /// ```
     /// # use simple_unc::SimpleUnc;
     /// # fn test() -> std::io::Result<()> {

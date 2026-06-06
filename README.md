@@ -30,12 +30,16 @@ so that these programs can handle.
 | --- | --- | --- |
 | [`fs::canonicalize`] | `\\?\C:\dir` | `\\?\UNC\server\share\x` |
 | `SimpleUnc` | `C:\dir` | `\\server\share\x` |
-| `SimpleUnc` with [`map_to_drive`] | `C:\dir` | `Z:\x` |
+| `SimpleUnc` with [map to drive] | `C:\dir` | `Z:\x` |
 
 Since the simplification may not always be safe,
 it does so if they are currently mapped to drives.
 
-Let's say your PC has a network share on the `Z:` drive:
+Please see the [documentation][docs] for more details.
+
+## Examples
+
+When your PC has a network share on the `Z:` drive:
 ```
 net use Z: \\server\share
 ```
@@ -63,16 +67,21 @@ prints:
 ```
 This path works fine for PowerShell and `cmd.exe`.
 
-## Drive
+## Map to Drive
+[map to drive]: #map-to-drive
 
-If you prefer to use the network drive in the path:
+If you prefer network drive names instead of UNC,
+enable the [`map_to_drive`] option.
 ```rust
 let path = r"Z:\dir\file";
-let unc = SimpleUnc { map_to_drive: true, ..Default::default() };
+let unc = SimpleUnc {
+    map_to_drive: true,
+    ..Default::default()
+};
 let simplified = unc.canonicalize(path)?;
 println!("{}", simplified.display());
 ```
-prints:
+The code above prints:
 ```
 Z:\dir\file
 ```
@@ -99,7 +108,7 @@ On other platforms,
 the `SimpleUnc` returns without doing anything.
 
 You can wrap the calls with `#[cfg(windows)]` if you prefer,
-though it's not necessary to build and run.
+though your programs should build and run fine without it.
 
 [`dunce`]: https://crates.io/crates/dunce
 [`fs::canonicalize`]: https://doc.rust-lang.org/std/fs/fn.canonicalize.html
