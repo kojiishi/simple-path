@@ -90,6 +90,14 @@ pub struct SimpleUnc {
 }
 
 impl SimpleUnc {
+    #[cfg(all(test, windows))]
+    pub(crate) fn mock() -> SimpleUnc {
+        SimpleUnc {
+            volumes: Some(Volumes::mock()),
+            ..Default::default()
+        }
+    }
+
     /// Calls [`fs::canonicalize`] and [`simplify`].
     ///
     /// On other platforms than Windows,
@@ -185,14 +193,6 @@ impl SimpleUnc {
         #[cfg(not(windows))]
         path.strip_prefix(base)
     }
-
-    #[cfg(all(test, windows))]
-    pub(crate) fn mock_with_drive() -> SimpleUnc {
-        SimpleUnc {
-            volumes: Some(Volumes::mock()),
-            ..Default::default()
-        }
-    }
 }
 
 fn io_error_from_anyhow(error: anyhow::Error) -> io::Error {
@@ -215,14 +215,14 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn simplify_drive_not_simplified() {
-        let unc = SimpleUnc::mock_with_drive();
+        let unc = SimpleUnc::mock();
         assert_eq!(unc.simplify(Path::new(r"C:\foo")).unwrap(), None);
     }
 
     #[cfg(windows)]
     #[test]
     fn simplify_drive_unc() {
-        let mut unc = SimpleUnc::mock_with_drive();
+        let mut unc = SimpleUnc::mock();
         let path = Path::new(r"\\?\UNC\server\share\foo");
         let path2 = Path::new(r"\\?\UNC\server2\share2\foo2");
         assert_eq!(
@@ -268,7 +268,7 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn simplify_unmapped_connected_share() {
-        let mut unc = SimpleUnc::mock_with_drive();
+        let mut unc = SimpleUnc::mock();
         let path = Path::new(r"\\?\UNC\server0\share0\foo");
         assert_eq!(
             unc.simplify(path).unwrap(),

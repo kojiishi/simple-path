@@ -49,7 +49,7 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn display_drive_unc() {
-        let mut unc = SimpleUnc::mock_with_drive();
+        let mut unc = SimpleUnc::mock();
         let path = Path::new(r"\\?\UNC\server\share\foo");
         assert_eq!(format!("{}", unc.display(path)), r"\\server\share\foo");
 
