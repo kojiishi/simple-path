@@ -104,11 +104,11 @@ let simple = SimplePath { skip_dunce: true, ..Default::default() };
 
 ## Other Platforms
 
-On other platforms,
+On other platforms than Windows,
 the `SimplePath` returns without doing anything.
 
 You can wrap the calls with `#[cfg(windows)]` if you prefer,
-though your programs should build and run fine without it.
+though your programs should build and run fine without doing so.
 
 [`dunce`]: https://crates.io/crates/dunce
 [`fs::canonicalize`]: https://doc.rust-lang.org/std/fs/fn.canonicalize.html

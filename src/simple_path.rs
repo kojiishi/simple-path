@@ -45,6 +45,9 @@ pub struct SimplePath {
     pub disallow_long: bool,
 
     /// Map to network share drive names when possible.
+    ///
+    /// # Examples
+    ///
     /// ```
     /// # use simple_path::SimplePath;
     /// # fn test() -> std::io::Result<()> {
@@ -169,7 +172,8 @@ impl SimplePath {
         Ok(())
     }
 
-    /// Returns an object that implements [`Display`][`core::fmt::Display`].
+    /// Returns an object that implements [`Display`][`core::fmt::Display`]
+    /// for printing simplified paths.
     ///
     /// # Examples
     ///
@@ -189,6 +193,16 @@ impl SimplePath {
     /// A snap-in replacement for [`Path::strip_prefix`]
     /// with a fix for [a leading "`\`" left for UNC paths
     /// on Windows](https://github.com/rust-lang/rust/issues/155183).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::path::{Path, StripPrefixError};
+    /// # use simple_path::SimplePath;
+    /// # fn t<'a>(path: &'a Path, base: &'a Path) -> Result<&'a Path, StripPrefixError> {
+    /// SimplePath::strip_prefix(path, base)
+    /// # }
+    /// ```
     pub fn strip_prefix(path: &Path, base: impl AsRef<Path>) -> Result<&Path, StripPrefixError> {
         #[cfg(windows)]
         return PathExt::strip_prefix_fix(path, base);
