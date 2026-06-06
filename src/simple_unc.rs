@@ -11,14 +11,15 @@ use std::{
 /// Simplifies [Win32 File Namespaces] paths (the "`\\?\`" prefix)
 /// for better readability and compatibility.
 ///
+/// The following code is a snap-in replacement of [`fs::canonicalize`].
 /// ```no_run
 /// # use simple_unc::SimpleUnc;
 /// # let path = "";
 /// SimpleUnc::default().canonicalize(path);
 /// ```
-/// is a snap-in replacement of [`fs::canonicalize`].
 ///
-/// | | `C:\dir` | `Z:\x` (network) |
+/// If you have `net use Z: \\server\share`:
+/// | | `C:\dir` | `Z:\x` |
 /// | --- | --- | --- |
 /// | [`fs::canonicalize`] | `\\?\C:\dir` | `\\?\UNC\server\share\x` |
 /// | `SimpleUnc` | `C:\dir` | `\\server\share\x` |
