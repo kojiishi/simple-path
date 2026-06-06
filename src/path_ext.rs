@@ -45,7 +45,7 @@ impl PathExt for Path {
         result_bytes.extend_from_slice(&bytes[WIN32_FILE_NAMESPACE_UNC.len()..]);
         assert_eq!(result_bytes.len(), bytes.len() - LEN_SUB);
         let os_str = unsafe { std::ffi::OsStr::from_encoded_bytes_unchecked(&result_bytes) };
-        Some(Path::new(os_str).to_path_buf())
+        Some(PathBuf::from(os_str))
     }
 
     fn is_wide_longer_than(&self, mut max: u32) -> bool {
