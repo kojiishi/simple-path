@@ -1,14 +1,14 @@
 //! Please see the [README] for a high-level overview,
-//! and the [`SimpleUnc`] struct for the detailed features.
+//! and the [`SimplePath`] struct for the detailed features.
 //!
-//! [README]: https://github.com/kojiishi/simple-unc
+//! [README]: https://github.com/kojiishi/simple-path
 
 mod display;
 #[cfg(windows)]
 mod drive_path;
 #[cfg(windows)]
 mod path_ext;
-mod simple_unc;
+mod simple_path;
 #[cfg(windows)]
 mod volume;
 
@@ -17,6 +17,6 @@ pub use display::Display;
 pub(crate) use drive_path::DrivePath;
 #[cfg(windows)]
 pub(crate) use path_ext::PathExt;
-pub use simple_unc::SimpleUnc;
+pub use simple_path::SimplePath;
 #[cfg(windows)]
 pub(crate) use volume::Volumes;

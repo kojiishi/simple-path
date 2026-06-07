@@ -13,22 +13,22 @@ use std::{
 ///
 /// The following code is a snap-in replacement of [`fs::canonicalize`].
 /// ```no_run
-/// # use simple_unc::SimpleUnc;
+/// # use simple_path::SimplePath;
 /// # let path = "";
-/// SimpleUnc::default().canonicalize(path);
+/// SimplePath::default().canonicalize(path);
 /// ```
 ///
 /// If you have `net use Z: \\server\share`:
 /// | | `C:\dir` | `Z:\x` |
 /// | --- | --- | --- |
 /// | [`fs::canonicalize`] | `\\?\C:\dir` | `\\?\UNC\server\share\x` |
-/// | `SimpleUnc` | `C:\dir` | `\\server\share\x` |
-/// | `SimpleUnc` with [`map_to_drive`] | `C:\dir` | `Z:\x` |
+/// | `SimplePath` | `C:\dir` | `\\server\share\x` |
+/// | `SimplePath` with [`map_to_drive`] | `C:\dir` | `Z:\x` |
 ///
-/// [`map_to_drive`]: `SimpleUnc::map_to_drive`
+/// [`map_to_drive`]: `SimplePath::map_to_drive`
 /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
 #[derive(Debug, Default)]
-pub struct SimpleUnc {
+pub struct SimplePath {
     /// When set to `true`,
     /// the simplification is disabled
     /// if the result is a "long path" (longer than 260 characters).
@@ -46,11 +46,11 @@ pub struct SimpleUnc {
 
     /// Map to network share drive names when possible.
     /// ```
-    /// # use simple_unc::SimpleUnc;
+    /// # use simple_path::SimplePath;
     /// # fn test() -> std::io::Result<()> {
     /// let path = "file.txt";
-    /// let unc = SimpleUnc { map_to_drive: true, ..Default::default() };
-    /// let canonicalized = unc.canonicalize(path)?;
+    /// let simple = SimplePath { map_to_drive: true, ..Default::default() };
+    /// let canonicalized = simple.canonicalize(path)?;
     /// # Ok(())
     /// # }
     /// ```
@@ -60,9 +60,9 @@ pub struct SimpleUnc {
     ///
     /// The following code tries to preserve the original form of the `path`.
     /// ```
-    /// # use simple_unc::SimpleUnc;
+    /// # use simple_path::SimplePath;
     /// # fn test(path: &std::path::Path) -> std::io::Result<()> {
-    /// SimpleUnc {
+    /// SimplePath {
     ///     map_to_drive: !path.as_os_str().as_encoded_bytes().starts_with(br"\\"),
     ///     ..Default::default()
     /// }.canonicalize(path)?;
@@ -89,10 +89,10 @@ pub struct SimpleUnc {
     volumes: Option<Volumes>,
 }
 
-impl SimpleUnc {
+impl SimplePath {
     #[cfg(all(test, windows))]
-    pub(crate) fn mock() -> SimpleUnc {
-        SimpleUnc {
+    pub(crate) fn mock() -> SimplePath {
+        SimplePath {
             volumes: Some(Volumes::mock()),
             ..Default::default()
         }
@@ -104,7 +104,7 @@ impl SimpleUnc {
     /// this is equivalent to [`fs::canonicalize`].
     ///
     /// [`fs::canonicalize`]: https://doc.rust-lang.org/std/fs/fn.canonicalize.html
-    /// [`simplify`]: SimpleUnc::simplify
+    /// [`simplify`]: SimplePath::simplify
     pub fn canonicalize(&self, path: impl AsRef<Path>) -> io::Result<PathBuf> {
         let canonicalized = fs::canonicalize(path)?;
         #[cfg(windows)]
@@ -173,10 +173,10 @@ impl SimpleUnc {
     ///
     /// ```
     /// # use std::path::Path;
-    /// # use simple_unc::SimpleUnc;
+    /// # use simple_path::SimplePath;
     /// # fn test() -> std::io::Result<()> {
     /// let path = Path::new("file").canonicalize()?;
-    /// println!("{}", SimpleUnc::default().display(&path));
+    /// println!("{}", SimplePath::default().display(&path));
     /// # Ok(())
     /// # }
     /// ```
@@ -208,39 +208,39 @@ mod tests {
 
     #[test]
     fn simplify_not_simplified() {
-        let unc = SimpleUnc::default();
-        assert_eq!(unc.simplify(Path::new(r"C:\foo")).unwrap(), None);
+        let simple = SimplePath::default();
+        assert_eq!(simple.simplify(Path::new(r"C:\foo")).unwrap(), None);
     }
 
     #[cfg(windows)]
     #[test]
     fn simplify_drive_not_simplified() {
-        let unc = SimpleUnc::mock();
-        assert_eq!(unc.simplify(Path::new(r"C:\foo")).unwrap(), None);
+        let simple = SimplePath::mock();
+        assert_eq!(simple.simplify(Path::new(r"C:\foo")).unwrap(), None);
     }
 
     #[cfg(windows)]
     #[test]
     fn simplify_drive_unc() {
-        let mut unc = SimpleUnc::mock();
+        let mut simple = SimplePath::mock();
         let path = Path::new(r"\\?\UNC\server\share\foo");
         let path2 = Path::new(r"\\?\UNC\server2\share2\foo2");
         assert_eq!(
-            unc.simplify(path).unwrap(),
+            simple.simplify(path).unwrap(),
             Some(Cow::Owned(PathBuf::from(r"\\server\share\foo")))
         );
         assert_eq!(
-            unc.simplify(path2).unwrap(),
+            simple.simplify(path2).unwrap(),
             Some(Cow::Owned(PathBuf::from(r"\\server2\share2\foo2")))
         );
 
-        unc.map_to_drive = true;
+        simple.map_to_drive = true;
         assert_eq!(
-            unc.simplify(path).unwrap(),
+            simple.simplify(path).unwrap(),
             Some(Cow::Owned(PathBuf::from(r"X:\foo")))
         );
         assert_eq!(
-            unc.simplify(path2).unwrap(),
+            simple.simplify(path2).unwrap(),
             Some(Cow::Owned(PathBuf::from(r"Z:\foo2")))
         );
     }
@@ -248,9 +248,9 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn simplify_dunce() {
-        let unc = SimpleUnc::default();
+        let simple = SimplePath::default();
         assert_eq!(
-            unc.simplify(Path::new(r"\\?\C:\foo")).unwrap(),
+            simple.simplify(Path::new(r"\\?\C:\foo")).unwrap(),
             Some(Cow::Borrowed(Path::new(r"C:\foo")))
         );
     }
@@ -258,28 +258,28 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn simplify_dunce_skip() {
-        let unc = SimpleUnc {
+        let simple = SimplePath {
             skip_dunce: true,
             ..Default::default()
         };
-        assert_eq!(unc.simplify(Path::new(r"\\?\C:\foo")).unwrap(), None);
+        assert_eq!(simple.simplify(Path::new(r"\\?\C:\foo")).unwrap(), None);
     }
 
     #[cfg(windows)]
     #[test]
     fn simplify_unmapped_connected_share() {
-        let mut unc = SimpleUnc::mock();
+        let mut simple = SimplePath::mock();
         let path = Path::new(r"\\?\UNC\server0\share0\foo");
         assert_eq!(
-            unc.simplify(path).unwrap(),
+            simple.simplify(path).unwrap(),
             Some(Cow::Owned(PathBuf::from(r"\\server0\share0\foo")))
         );
 
         // Even with map_to_drive = true, it should simplify to the UNC path,
         // because the drive letter is '\0'.
-        unc.map_to_drive = true;
+        simple.map_to_drive = true;
         assert_eq!(
-            unc.simplify(path).unwrap(),
+            simple.simplify(path).unwrap(),
             Some(Cow::Owned(PathBuf::from(r"\\server0\share0\foo")))
         );
     }

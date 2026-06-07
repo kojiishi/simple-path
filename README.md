@@ -2,14 +2,14 @@
 [![crate-badge]][crate]
 [![docs-badge]][docs]
 
-[CI-badge]: https://github.com/kojiishi/simple-unc/actions/workflows/rust-ci.yml/badge.svg
-[CI]: https://github.com/kojiishi/simple-unc/actions/workflows/rust-ci.yml
-[crate-badge]: https://img.shields.io/crates/v/simple-unc.svg
-[crate]: https://crates.io/crates/simple-unc
-[docs-badge]: https://docs.rs/simple-unc/badge.svg
-[docs]: https://docs.rs/simple-unc/
+[CI-badge]: https://github.com/kojiishi/simple-path/actions/workflows/rust-ci.yml/badge.svg
+[CI]: https://github.com/kojiishi/simple-path/actions/workflows/rust-ci.yml
+[crate-badge]: https://img.shields.io/crates/v/simple-path.svg
+[crate]: https://crates.io/crates/simple-path
+[docs-badge]: https://docs.rs/simple-path/badge.svg
+[docs]: https://docs.rs/simple-path/
 
-# SimpleUnc
+# SimplePath
 
 On Windows,
 [`fs::canonicalize`] returns a path prefixed by "`\\?\`".
@@ -23,14 +23,14 @@ and is fine for most modern APIs,
 but some programs can't handle them.
 PowerShell and `cmd.exe` are examples of such programs.
 
-The `SimpleUnc` simplifies network share UNC paths
+The `SimplePath` simplifies network share UNC paths
 so that these programs can handle.
 
 | | `C:\dir` | `Z:\x` (network) |
 | --- | --- | --- |
 | [`fs::canonicalize`] | `\\?\C:\dir` | `\\?\UNC\server\share\x` |
-| `SimpleUnc` | `C:\dir` | `\\server\share\x` |
-| `SimpleUnc` with [map to drive] | `C:\dir` | `Z:\x` |
+| `SimplePath` | `C:\dir` | `\\server\share\x` |
+| `SimplePath` with [map to drive] | `C:\dir` | `Z:\x` |
 
 Since the simplification may not always be safe,
 it does so if they are currently mapped to drives.
@@ -55,10 +55,10 @@ prints:
 ```
 Neither PowerShell nor `cmd.exe` can handle this path.
 
-With the `SimpleUnc`:
+With the `SimplePath`:
 ```rust
 let path = r"Z:\dir\file";
-let simplified = SimpleUnc::default().canonicalize(path)?;
+let simplified = SimplePath::default().canonicalize(path)?;
 println!("{}", simplified.display());
 ```
 prints:
@@ -74,11 +74,11 @@ If you prefer network drive names instead of UNC,
 enable the [`map_to_drive`] option.
 ```rust
 let path = r"Z:\dir\file";
-let unc = SimpleUnc {
+let simple = SimplePath {
     map_to_drive: true,
     ..Default::default()
 };
-let simplified = unc.canonicalize(path)?;
+let simplified = simple.canonicalize(path)?;
 println!("{}", simplified.display());
 ```
 The code above prints:
@@ -88,7 +88,7 @@ Z:\dir\file
 
 ## Dunce
 
-The `SimpleUnc` calls the [`dunce`] crate
+The `SimplePath` calls the [`dunce`] crate
 to normalize some other cases, such as:
 ```
 \\?\C:\foo
@@ -99,18 +99,18 @@ C:\foo
 ```
 You can skip the [`dunce`] simplification if you prefer:
 ```rust
-let unc = SimpleUnc { skip_dunce: true, ..Default::default() };
+let simple = SimplePath { skip_dunce: true, ..Default::default() };
 ```
 
 ## Other Platforms
 
 On other platforms,
-the `SimpleUnc` returns without doing anything.
+the `SimplePath` returns without doing anything.
 
 You can wrap the calls with `#[cfg(windows)]` if you prefer,
 though your programs should build and run fine without it.
 
 [`dunce`]: https://crates.io/crates/dunce
 [`fs::canonicalize`]: https://doc.rust-lang.org/std/fs/fn.canonicalize.html
-[`map_to_drive`]: https://docs.rs/simple-unc/latest/simple_unc/struct.SimpleUnc.html#structfield.map_to_drive
+[`map_to_drive`]: https://docs.rs/simple-path/latest/simple_path/struct.SimplePath.html#structfield.map_to_drive
 [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces

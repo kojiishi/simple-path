@@ -233,8 +233,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "simple-unc"
-version = "0.2.7"
+name = "simple-path"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "dunce",

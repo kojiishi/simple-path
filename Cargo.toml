@@ -1,15 +1,15 @@
 [package]
-name = "simple-unc"
-version = "0.2.7"
+name = "simple-path"
+version = "0.3.0"
 edition = "2024"
 rust-version = "1.88"
 description = "Simplify Windows UNC path for `fs::canonicalize`"
 authors = ["Koji Ishii <kojiishi@gmail.com>"]
 license = "Apache-2.0"
-repository = "https://github.com/kojiishi/simple-unc"
-documentation = "https://docs.rs/simple-unc/"
+repository = "https://github.com/kojiishi/simple-path"
+documentation = "https://docs.rs/simple-path/"
 readme = "README.md"
-keywords = ["path", "UNC", "windows"]
+keywords = ["path", "UNC", "windows", "canonicalize"]
 categories = ["development-tools"]
 exclude = [".github", ".gitignore", ".vscode", "Taskfile.yml"]
 
