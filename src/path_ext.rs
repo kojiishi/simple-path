@@ -28,9 +28,9 @@ pub(crate) trait PathExt {
 impl PathExt for Path {
     fn is_win32_file_namespace_unc(&self) -> bool {
         let bytes = self.as_os_str().as_encoded_bytes();
-        bytes
-            .to_ascii_lowercase()
-            .starts_with(WIN32_FILE_NAMESPACE_UNC)
+        bytes.len() >= WIN32_FILE_NAMESPACE_UNC.len()
+            && bytes[..WIN32_FILE_NAMESPACE_UNC.len()].to_ascii_lowercase()
+                == *WIN32_FILE_NAMESPACE_UNC
     }
 
     fn unc_from_win32_file_namespace(&self, disallow_long: bool) -> Option<PathBuf> {
