@@ -129,7 +129,9 @@ impl SimplePath {
     #[cfg(windows)]
     fn _simplify<'a>(&self, path: &'a Path) -> anyhow::Result<Option<Cow<'a, Path>>> {
         // Try mapped network share drives.
-        if let Some(drive_path) = self.drive_path(path)? {
+        if path.is_win32_file_namespace_unc()
+            && let Some(drive_path) = self.drive_path(path)?
+        {
             if self.map_to_drive
                 && drive_path.has_drive()
                 && (!self.disallow_long || !drive_path.is_win32_long_path())
