@@ -33,7 +33,7 @@ impl Volumes {
         Ok(Self::with_volumes(Volume::get_remote_volumes()?))
     }
 
-    pub(crate) fn with_volumes(mut volumes: Vec<Volume>) -> Self {
+    fn with_volumes(mut volumes: Vec<Volume>) -> Self {
         volumes = Volume::sort(volumes);
         Self { volumes }
     }
@@ -41,6 +41,7 @@ impl Volumes {
     #[cfg(all(test, windows))]
     pub(crate) fn mock() -> Self {
         Self::with_volumes(vec![
+            Volume::new('H', PathBuf::from(r"\\?\UNC\server\share\dir")),
             Volume::new('X', PathBuf::from(r"\\?\UNC\server\share")),
             Volume::new('Z', PathBuf::from(r"\\?\UNC\server2\share2")),
             Volume::new('\0', PathBuf::from(r"\\?\UNC\server0\share0")),
@@ -337,11 +338,7 @@ mod tests {
     // [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
     #[test]
     fn drive_path_win32_file_namespaces() {
-        let volumes = Volumes::with_volumes(vec![
-            Volume::new('H', PathBuf::from(r"\\?\UNC\server\share\dir")),
-            Volume::new('X', PathBuf::from(r"\\?\UNC\server\share")),
-            Volume::new('Z', PathBuf::from(r"\\?\UNC\server2\share2")),
-        ]);
+        let volumes = Volumes::mock();
         assert_eq!(
             volumes._drive_path(Path::new(r"\\?\UNC\server\share\dir\file.txt")),
             Some(DrivePath::new('X', Path::new(r"dir\file.txt")))
@@ -355,13 +352,8 @@ mod tests {
             None,
         );
         assert_eq!(volumes._drive_path(Path::new(r"C:\Windows\System32")), None);
-
-        let unmapped_drives = Volumes::with_volumes(vec![Volume::new(
-            '\0',
-            PathBuf::from(r"\\?\UNC\server\share"),
-        )]);
         assert_eq!(
-            unmapped_drives._drive_path(Path::new(r"\\?\UNC\server\share\dir\file.txt")),
+            volumes._drive_path(Path::new(r"\\?\UNC\server0\share0\dir\file.txt")),
             Some(DrivePath::new('\0', Path::new(r"dir\file.txt")))
         );
     }
