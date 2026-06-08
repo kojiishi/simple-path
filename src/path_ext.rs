@@ -1,24 +1,11 @@
+use crate::OsStrExt;
 use std::{
-    os::windows::ffi::OsStrExt,
-    path::{Component, Path, PathBuf, StripPrefixError},
+    os::windows::ffi::OsStrExt as _,
+    path::{Component, Path, StripPrefixError},
 };
-use windows::Win32::Foundation::MAX_PATH;
-
-const WIN32_FILE_NAMESPACE_UNC: &[u8] = br"\\?\unc\";
 
 pub(crate) trait PathExt {
-    /// Check if the `path` is the [Win32 File Namespaces].
-    ///
-    /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
-    fn is_win32_file_namespace_unc(&self) -> bool;
-
-    /// Convert the [Win32 File Namespaces] to UNC.
-    ///
-    /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
-    fn unc_from_win32_file_namespace(&self, disallow_long: bool) -> Option<PathBuf>;
-
-    fn is_wide_longer_than(&self, max: u32) -> bool;
-
+    fn is_longer_than_wide(&self, max: u32) -> bool;
     fn to_wide_vec_with_nul(&self) -> Vec<u16>;
 
     fn strip_prefix_fix(&self, base: impl AsRef<Path>) -> Result<&Path, StripPrefixError>;
@@ -26,39 +13,8 @@ pub(crate) trait PathExt {
 }
 
 impl PathExt for Path {
-    fn is_win32_file_namespace_unc(&self) -> bool {
-        let bytes = self.as_os_str().as_encoded_bytes();
-        bytes.len() >= WIN32_FILE_NAMESPACE_UNC.len()
-            && bytes[..WIN32_FILE_NAMESPACE_UNC.len()].to_ascii_lowercase()
-                == *WIN32_FILE_NAMESPACE_UNC
-    }
-
-    fn unc_from_win32_file_namespace(&self, disallow_long: bool) -> Option<PathBuf> {
-        if !self.is_win32_file_namespace_unc() {
-            return None;
-        }
-        const PREFIX: &[u8] = br"\\";
-        const LEN_SUB: usize = WIN32_FILE_NAMESPACE_UNC.len() - PREFIX.len();
-        if disallow_long && self.is_wide_longer_than(MAX_PATH + LEN_SUB as u32) {
-            return None;
-        }
-        let bytes = self.as_os_str().as_encoded_bytes();
-        let mut result_bytes = Vec::with_capacity(bytes.len() - LEN_SUB);
-        result_bytes.extend_from_slice(PREFIX);
-        result_bytes.extend_from_slice(&bytes[WIN32_FILE_NAMESPACE_UNC.len()..]);
-        assert_eq!(result_bytes.len(), bytes.len() - LEN_SUB);
-        let os_str = unsafe { std::ffi::OsStr::from_encoded_bytes_unchecked(&result_bytes) };
-        Some(PathBuf::from(os_str))
-    }
-
-    fn is_wide_longer_than(&self, mut max: u32) -> bool {
-        for _ in self.as_os_str().encode_wide() {
-            if max == 0 {
-                return true;
-            }
-            max -= 1;
-        }
-        false
+    fn is_longer_than_wide(&self, max: u32) -> bool {
+        self.as_os_str().is_longer_than_wide(max)
     }
 
     fn to_wide_vec_with_nul(&self) -> Vec<u16> {
@@ -91,66 +47,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn is_win32_file_namespace_unc() {
-        assert!(Path::new(r"\\?\UNC\server\share\dir").is_win32_file_namespace_unc());
-        assert!(Path::new(r"\\?\unc\server\share\dir").is_win32_file_namespace_unc());
-        assert!(Path::new(r"\\?\UnC\server\share\dir").is_win32_file_namespace_unc());
+    fn is_longer_than_wide() {
+        assert!(!Path::new("").is_longer_than_wide(10));
 
-        assert!(!Path::new(r"\\?\UNC").is_win32_file_namespace_unc());
-        assert!(!Path::new(r"\\?\server\share\dir").is_win32_file_namespace_unc());
-        assert!(!Path::new(r"\\server\share\dir").is_win32_file_namespace_unc());
-        assert!(!Path::new("/a/b").is_win32_file_namespace_unc());
-    }
+        assert!(!Path::new(&"1".repeat(9)).is_longer_than_wide(10));
+        assert!(!Path::new(&"1".repeat(10)).is_longer_than_wide(10));
+        assert!(Path::new(&"1".repeat(11)).is_longer_than_wide(10));
 
-    #[test]
-    fn unc_from_win32_file_namespace() {
-        assert_eq!(
-            Path::new(r"C:\foo").unc_from_win32_file_namespace(false),
-            None
-        );
-        assert_eq!(
-            Path::new(r"\\?\UNC\server\share\dir").unc_from_win32_file_namespace(false),
-            Some(PathBuf::from(r"\\server\share\dir"))
-        );
-    }
-
-    #[test]
-    fn unc_from_win32_file_namespace_long() {
-        const PREFIX: &str = r"\\?\UNC\";
-        const UNC_PREFIX: &str = r"\\";
-        const SERVER_SHARE: &str = r"server\share\";
-        const PATH_MAX: usize = MAX_PATH as usize - UNC_PREFIX.len() - SERVER_SHARE.len();
-        let max_src = PREFIX.to_string() + SERVER_SHARE + &"1".repeat(PATH_MAX);
-        assert_eq!(
-            Path::new(&max_src).unc_from_win32_file_namespace(true),
-            Some(PathBuf::from(
-                &(UNC_PREFIX.to_string() + SERVER_SHARE + &"1".repeat(PATH_MAX))
-            ))
-        );
-        let too_long_src = PREFIX.to_string() + SERVER_SHARE + &"1".repeat(PATH_MAX + 1);
-        assert_eq!(
-            Path::new(&too_long_src).unc_from_win32_file_namespace(true),
-            None
-        );
-        assert_eq!(
-            Path::new(&too_long_src).unc_from_win32_file_namespace(false),
-            Some(PathBuf::from(
-                &(UNC_PREFIX.to_string() + SERVER_SHARE + &"1".repeat(PATH_MAX + 1))
-            ))
-        );
-    }
-
-    #[test]
-    fn is_wide_longer_than() {
-        assert!(!Path::new("").is_wide_longer_than(10));
-
-        assert!(!Path::new(&"1".repeat(9)).is_wide_longer_than(10));
-        assert!(!Path::new(&"1".repeat(10)).is_wide_longer_than(10));
-        assert!(Path::new(&"1".repeat(11)).is_wide_longer_than(10));
-
-        assert!(!Path::new(&"\u{3042}".repeat(9)).is_wide_longer_than(10));
-        assert!(!Path::new(&"\u{3042}".repeat(10)).is_wide_longer_than(10));
-        assert!(Path::new(&"\u{3042}".repeat(11)).is_wide_longer_than(10));
+        assert!(!Path::new(&"\u{3042}".repeat(9)).is_longer_than_wide(10));
+        assert!(!Path::new(&"\u{3042}".repeat(10)).is_longer_than_wide(10));
+        assert!(Path::new(&"\u{3042}".repeat(11)).is_longer_than_wide(10));
     }
 
     #[test]
@@ -162,7 +68,6 @@ mod tests {
         );
     }
 
-    #[cfg(windows)]
     #[test]
     fn strip_prefix_fix() {
         let path = Path::new(r"\\?\UNC\server\share\dir");
@@ -173,7 +78,6 @@ mod tests {
         assert_eq!(path.strip_prefix_fix(base), Ok(Path::new(r"dir")));
     }
 
-    #[cfg(windows)]
     #[test]
     fn trim_leading_separator() {
         assert_eq!(Path::new("/").trim_leading_separator(), Path::new(""));

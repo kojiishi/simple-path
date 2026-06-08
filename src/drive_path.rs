@@ -17,9 +17,9 @@ impl<'a> DrivePath<'a> {
         self.drive_letter != '\0'
     }
 
-    pub(crate) fn is_win32_long_path(&self) -> bool {
+    pub(crate) fn is_longer_than_win_max_path(&self) -> bool {
         const PREFIX_LEN: u32 = r"A:\".len() as u32;
-        self.path.is_wide_longer_than(MAX_PATH - PREFIX_LEN)
+        self.path.is_longer_than_wide(MAX_PATH - PREFIX_LEN)
     }
 
     pub(crate) fn to_path_buf(&self) -> PathBuf {
