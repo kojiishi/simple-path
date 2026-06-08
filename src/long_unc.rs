@@ -1,7 +1,7 @@
-use crate::OsStrExt;
+use crate::{OsStrExt, PathExt};
 use std::{
     ffi::OsStr,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 use windows::Win32::Foundation::MAX_PATH;
 
@@ -60,6 +60,10 @@ impl<'a> LongUnc<'a> {
         unsafe { OsStr::from_encoded_bytes_unchecked(self.stripped) }
     }
 
+    fn as_stripped_path(&self) -> &Path {
+        Path::new(self.as_stripped_osstr())
+    }
+
     fn is_sub_prefix_unc(&self) -> bool {
         self.stripped.len() >= Self::UNC_SUB_PREFIX.len()
             && self.stripped[..Self::UNC_SUB_PREFIX.len()]
@@ -72,6 +76,19 @@ impl<'a> LongUnc<'a> {
 
     fn is_short_unc_longer_than_max_path(&self) -> bool {
         self.is_stripped_longer_than_wide(MAX_PATH + Self::SHORT_UNC_LEN_SUB as u32)
+    }
+
+    pub(crate) fn has_invalid_chars(&self) -> bool {
+        let mut path = self.as_stripped_path();
+        let mut components = path.components();
+        println!("{components:?}");
+        match components.next() {
+            None => return false,
+            // Skip `Prefix`; e.g., `\\?\C:`.
+            Some(Component::Prefix(_)) => path = components.as_path(),
+            _ => {}
+        };
+        path.has_win_invalid_chars()
     }
 
     pub(crate) fn to_short_unc_opt(&self, disallow_long: bool) -> Option<PathBuf> {
@@ -127,6 +144,19 @@ mod tests {
         assert!(!from_bytes(br"\\?\UNC").is_sub_prefix_unc());
         assert!(!from_bytes(br"\\?\UNCD\").is_sub_prefix_unc());
         assert!(!from_bytes(br"\\?\server\share\dir").is_sub_prefix_unc());
+    }
+
+    #[test]
+    fn has_invalid_chars() {
+        assert!(!from_bytes(br"\\?\UNC\foo").has_invalid_chars());
+        assert!(!from_bytes(br"\\?\C:\").has_invalid_chars());
+        assert!(!from_bytes(br"\\?\C:\foo").has_invalid_chars());
+
+        assert!(from_bytes(br"\\?\UNC\foo:").has_invalid_chars());
+        assert!(from_bytes(br"\\?\UNC\foo>").has_invalid_chars());
+        assert!(from_bytes(br"\\?\C:\foo:").has_invalid_chars());
+        assert!(from_bytes(br"\\?\:\foo").has_invalid_chars());
+        assert!(from_bytes(br"\\?\>\foo").has_invalid_chars());
     }
 
     #[test]
