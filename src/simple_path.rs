@@ -1,7 +1,7 @@
 #![cfg_attr(not(target_os = "windows"), allow(unused))]
 use crate::Display;
 #[cfg(windows)]
-use crate::{PathExt, Volumes};
+use crate::{LongUnc, PathExt, Volumes};
 use std::{
     borrow::Cow,
     fs, io,
@@ -131,17 +131,17 @@ impl SimplePath {
 
     #[cfg(windows)]
     fn _simplify<'a>(&self, path: &'a Path) -> anyhow::Result<Option<Cow<'a, Path>>> {
-        // Try mapped network share drives.
-        if path.is_win32_file_namespace_unc()
+        // Try mapped network share drives if long UNC.
+        if let Ok(long_unc) = LongUnc::try_from(path)
             && let Some(drive_path) = self.drive_path(path)?
         {
             if self.map_to_drive
                 && drive_path.has_drive()
-                && (!self.disallow_long || !drive_path.is_win32_long_path())
+                && (!self.disallow_long || !drive_path.is_longer_than_win_max_path())
             {
                 return Ok(Some(Cow::Owned(drive_path.to_path_buf())));
             }
-            if let Some(unc) = path.unc_from_win32_file_namespace(self.disallow_long) {
+            if let Some(unc) = long_unc.to_short_unc_opt(self.disallow_long) {
                 return Ok(Some(Cow::Owned(unc)));
             }
         }
@@ -191,7 +191,7 @@ impl SimplePath {
     }
 
     /// A snap-in replacement for [`Path::strip_prefix`]
-    /// with a fix for [a leading "`\`" left for UNC paths
+    /// with a fix for [a leading directory separator "`\`" left for UNC paths
     /// on Windows](https://github.com/rust-lang/rust/issues/155183).
     ///
     /// # Examples

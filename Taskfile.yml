@@ -10,6 +10,7 @@ tasks:
     - task: tests
     - task: lints
     - task: fmtchk
+    - git diff --exit-code
 
   fix: cargo clippy --fix {{.TARGET}} {{.FEATURE}} {{.CLIPPY}} {{.CLI_ARGS}}
   fmt: cargo fmt {{.FMT}} {{.CLI_ARGS}}
