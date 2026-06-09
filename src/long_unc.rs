@@ -34,19 +34,19 @@ impl<'a, const N: usize> TryFrom<&'a [u8; N]> for LongUnc<'a> {
     }
 }
 
-impl<'a> TryFrom<&'a Path> for LongUnc<'a> {
-    type Error = ();
-
-    fn try_from(path: &'a Path) -> Result<Self, Self::Error> {
-        Self::try_from(path.as_os_str().as_encoded_bytes())
-    }
-}
-
 impl<'a> TryFrom<&'a str> for LongUnc<'a> {
     type Error = ();
 
     fn try_from(str: &'a str) -> Result<Self, Self::Error> {
         Self::try_from(str.as_bytes())
+    }
+}
+
+impl<'a> TryFrom<&'a Path> for LongUnc<'a> {
+    type Error = ();
+
+    fn try_from(path: &'a Path) -> Result<Self, Self::Error> {
+        Self::try_from(path.as_os_str().as_encoded_bytes())
     }
 }
 
@@ -60,18 +60,18 @@ impl<'a> LongUnc<'a> {
         unsafe { OsStr::from_encoded_bytes_unchecked(self.stripped) }
     }
 
+    fn is_sub_prefix_unc(&self) -> bool {
+        self.stripped.len() >= Self::UNC_SUB_PREFIX.len()
+            && self.stripped[..Self::UNC_SUB_PREFIX.len()]
+                .eq_ignore_ascii_case(Self::UNC_SUB_PREFIX)
+    }
+
     fn is_stripped_longer_than_wide(&self, max: u32) -> bool {
         self.as_stripped_osstr().is_longer_than_wide(max)
     }
 
     fn is_short_unc_longer_than_max_path(&self) -> bool {
         self.is_stripped_longer_than_wide(MAX_PATH + Self::SHORT_UNC_LEN_SUB as u32)
-    }
-
-    fn is_sub_prefix_unc(&self) -> bool {
-        self.stripped.len() >= Self::UNC_SUB_PREFIX.len()
-            && self.stripped[..Self::UNC_SUB_PREFIX.len()]
-                .eq_ignore_ascii_case(Self::UNC_SUB_PREFIX)
     }
 
     pub(crate) fn to_short_unc_opt(&self, disallow_long: bool) -> Option<PathBuf> {
