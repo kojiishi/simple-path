@@ -1,8 +1,5 @@
 use crate::OsStrExt;
-use std::{
-    os::windows::ffi::OsStrExt as _,
-    path::{Component, Path, StripPrefixError},
-};
+use std::path::{Component, Path, StripPrefixError};
 
 pub(crate) trait PathExt {
     fn is_longer_than_wide(&self, max: u32) -> bool;
@@ -18,7 +15,7 @@ impl PathExt for Path {
     }
 
     fn to_wide_vec_with_nul(&self) -> Vec<u16> {
-        self.as_os_str().encode_wide().chain(Some(0)).collect()
+        self.as_os_str().to_wide_vec_with_nul()
     }
 
     fn strip_prefix_fix(&self, base: impl AsRef<Path>) -> Result<&Path, StripPrefixError> {
@@ -57,15 +54,6 @@ mod tests {
         assert!(!Path::new(&"\u{3042}".repeat(9)).is_longer_than_wide(10));
         assert!(!Path::new(&"\u{3042}".repeat(10)).is_longer_than_wide(10));
         assert!(Path::new(&"\u{3042}".repeat(11)).is_longer_than_wide(10));
-    }
-
-    #[test]
-    fn to_wide_vec_with_nul() {
-        assert_eq!(Path::new("AB").to_wide_vec_with_nul(), vec![0x41, 0x42, 0]);
-        assert_eq!(
-            Path::new("\u{3042}\u{3043}").to_wide_vec_with_nul(),
-            vec![0x3042, 0x3043, 0]
-        );
     }
 
     #[test]

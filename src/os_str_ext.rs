@@ -2,6 +2,7 @@ use std::{ffi::OsStr, os::windows::ffi::OsStrExt as _};
 
 pub(crate) trait OsStrExt {
     fn is_longer_than_wide(&self, max: u32) -> bool;
+    fn to_wide_vec_with_nul(&self) -> Vec<u16>;
 }
 
 impl OsStrExt for OsStr {
@@ -13,6 +14,10 @@ impl OsStrExt for OsStr {
             max -= 1;
         }
         false
+    }
+
+    fn to_wide_vec_with_nul(&self) -> Vec<u16> {
+        self.encode_wide().chain(Some(0)).collect()
     }
 }
 
@@ -36,5 +41,14 @@ mod tests {
         assert!(!is_longer_than_wide(&wide10, 10));
         let wide11 = "\u{3042}".repeat(11);
         assert!(is_longer_than_wide(&wide11, 10));
+    }
+
+    #[test]
+    fn to_wide_vec_with_nul() {
+        assert_eq!(OsStr::new("AB").to_wide_vec_with_nul(), vec![0x41, 0x42, 0]);
+        assert_eq!(
+            OsStr::new("\u{3042}\u{3043}").to_wide_vec_with_nul(),
+            vec![0x3042, 0x3043, 0]
+        );
     }
 }
