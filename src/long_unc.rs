@@ -81,7 +81,6 @@ impl<'a> LongUnc<'a> {
     pub(crate) fn has_invalid_chars(&self) -> bool {
         let mut path = self.as_stripped_path();
         let mut components = path.components();
-        println!("{components:?}");
         match components.next() {
             None => return false,
             // Skip `Prefix`; e.g., `\\?\C:`.
@@ -97,7 +96,7 @@ impl<'a> LongUnc<'a> {
         let mut result_bytes = Vec::with_capacity(capacity);
         result_bytes.extend_from_slice(Self::SHORT_UNC_PREFIX);
         result_bytes.extend_from_slice(&self.stripped[Self::UNC_SUB_PREFIX.len()..]);
-        assert_eq!(result_bytes.len(), capacity);
+        debug_assert_eq!(result_bytes.len(), capacity);
         let os_str = unsafe { OsStr::from_encoded_bytes_unchecked(&result_bytes) };
         PathBuf::from(os_str)
     }
