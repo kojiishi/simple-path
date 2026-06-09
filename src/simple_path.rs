@@ -137,11 +137,14 @@ impl SimplePath {
         {
             if self.map_to_drive
                 && drive_path.has_drive()
+                && !drive_path.has_invalid_chars()
                 && (!self.disallow_long || !drive_path.is_longer_than_win_max_path())
             {
                 return Ok(Some(Cow::Owned(drive_path.to_path_buf())));
             }
-            if let Some(unc) = long_unc.to_short_unc_opt(self.disallow_long) {
+            if !long_unc.has_invalid_chars()
+                && let Some(unc) = long_unc.to_short_unc_opt(self.disallow_long)
+            {
                 return Ok(Some(Cow::Owned(unc)));
             }
         }

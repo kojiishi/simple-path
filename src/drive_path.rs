@@ -17,6 +17,10 @@ impl<'a> DrivePath<'a> {
         self.drive_letter != '\0'
     }
 
+    pub(crate) fn has_invalid_chars(&self) -> bool {
+        self.path.has_win_invalid_chars()
+    }
+
     pub(crate) fn is_longer_than_win_max_path(&self) -> bool {
         const PREFIX_LEN: u32 = r"A:\".len() as u32;
         self.path.is_longer_than_wide(MAX_PATH - PREFIX_LEN)

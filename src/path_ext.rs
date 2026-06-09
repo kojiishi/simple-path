@@ -2,6 +2,8 @@ use crate::OsStrExt;
 use std::path::{Component, Path, StripPrefixError};
 
 pub(crate) trait PathExt {
+    fn has_win_invalid_chars(&self) -> bool;
+
     fn is_longer_than_wide(&self, max: u32) -> bool;
     fn to_wide_vec_with_nul(&self) -> Vec<u16>;
 
@@ -10,6 +12,10 @@ pub(crate) trait PathExt {
 }
 
 impl PathExt for Path {
+    fn has_win_invalid_chars(&self) -> bool {
+        self.as_os_str().has_win_invalid_chars()
+    }
+
     fn is_longer_than_wide(&self, max: u32) -> bool {
         self.as_os_str().is_longer_than_wide(max)
     }
