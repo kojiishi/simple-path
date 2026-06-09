@@ -64,7 +64,7 @@ impl<'a> LongUnc<'a> {
         Path::new(self.as_stripped_osstr())
     }
 
-    fn is_sub_prefix_unc(&self) -> bool {
+    pub(crate) fn is_sub_prefix_unc(&self) -> bool {
         self.stripped.len() >= Self::UNC_SUB_PREFIX.len()
             && self.stripped[..Self::UNC_SUB_PREFIX.len()]
                 .eq_ignore_ascii_case(Self::UNC_SUB_PREFIX)
@@ -74,7 +74,7 @@ impl<'a> LongUnc<'a> {
         self.as_stripped_osstr().is_longer_than_wide(max)
     }
 
-    fn is_short_unc_longer_than_max_path(&self) -> bool {
+    pub(crate) fn is_short_unc_longer_than_max_path(&self) -> bool {
         self.is_stripped_longer_than_wide(MAX_PATH + Self::SHORT_UNC_LEN_SUB as u32)
     }
 
@@ -91,20 +91,15 @@ impl<'a> LongUnc<'a> {
         path.has_win_invalid_chars()
     }
 
-    pub(crate) fn to_short_unc_opt(&self, disallow_long: bool) -> Option<PathBuf> {
-        if !self.is_sub_prefix_unc() {
-            return None;
-        }
-        if disallow_long && self.is_short_unc_longer_than_max_path() {
-            return None;
-        }
+    pub(crate) fn to_short_unc(&self) -> PathBuf {
+        assert!(self.is_sub_prefix_unc());
         let capacity = self.stripped.len() - Self::SHORT_UNC_LEN_SUB;
         let mut result_bytes = Vec::with_capacity(capacity);
         result_bytes.extend_from_slice(Self::SHORT_UNC_PREFIX);
         result_bytes.extend_from_slice(&self.stripped[Self::UNC_SUB_PREFIX.len()..]);
         assert_eq!(result_bytes.len(), capacity);
         let os_str = unsafe { OsStr::from_encoded_bytes_unchecked(&result_bytes) };
-        Some(PathBuf::from(os_str))
+        PathBuf::from(os_str)
     }
 }
 
@@ -160,38 +155,34 @@ mod tests {
     }
 
     #[test]
-    fn to_short_unc_opt() {
-        assert_eq!(from_bytes(br"\\?\C:\foo").to_short_unc_opt(false), None);
+    fn to_short_unc() {
         assert_eq!(
-            from_bytes(br"\\?\UNC\server\share\dir").to_short_unc_opt(false),
-            Some(PathBuf::from(r"\\server\share\dir"))
+            from_bytes(br"\\?\UNC\server\share\dir").to_short_unc(),
+            PathBuf::from(r"\\server\share\dir")
         );
     }
 
     #[test]
-    fn to_short_unc_opt_long() {
+    fn is_short_unc_longer_than_max_path() {
         const PREFIX: &str = r"\\?\UNC\";
         const SHORT_PREFIX: &str = r"\\";
         const SERVER_SHARE: &str = r"server\share\";
         const PATH_MAX: usize = MAX_PATH as usize - SHORT_PREFIX.len() - SERVER_SHARE.len();
-
-        for (suffix, wide_len) in [
+        for (suffix, len) in [
             ("1".repeat(PATH_MAX), MAX_PATH),
             ("1".repeat(PATH_MAX + 1), MAX_PATH + 1),
             ("\u{3042}".repeat(PATH_MAX), MAX_PATH),
             ("\u{3042}".repeat(PATH_MAX + 1), MAX_PATH + 1),
         ] {
+            let is_too_long = len > MAX_PATH;
             let suffix = SERVER_SHARE.to_string() + &suffix;
-            let long = PREFIX.to_string() + &suffix;
-            let short = PathBuf::from(&(SHORT_PREFIX.to_string() + &suffix));
-            assert_eq!(short.as_os_str().encode_wide().count(), wide_len as usize);
-            if wide_len <= MAX_PATH {
-                assert_eq!(from_str(&long).to_short_unc_opt(false), Some(short.clone()));
-                assert_eq!(from_str(&long).to_short_unc_opt(true), Some(short));
-            } else {
-                assert_eq!(from_str(&long).to_short_unc_opt(false), Some(short));
-                assert_eq!(from_str(&long).to_short_unc_opt(true), None);
-            }
+            let path_str = PREFIX.to_string() + &suffix;
+            let long = from_str(&path_str);
+            assert_eq!(long.is_short_unc_longer_than_max_path(), is_too_long);
+
+            let short = long.to_short_unc();
+            assert_eq!(short, PathBuf::from(&(SHORT_PREFIX.to_string() + &suffix)));
+            assert_eq!(short.as_os_str().encode_wide().count(), len as usize);
         }
     }
 }

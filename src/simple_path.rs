@@ -138,14 +138,15 @@ impl SimplePath {
             if self.map_to_drive
                 && drive_path.has_drive()
                 && !drive_path.has_invalid_chars()
-                && (!self.disallow_long || !drive_path.is_longer_than_win_max_path())
+                && (!self.disallow_long || !drive_path.is_longer_than_max_path())
             {
                 return Ok(Some(Cow::Owned(drive_path.to_path_buf())));
             }
-            if !long_unc.has_invalid_chars()
-                && let Some(unc) = long_unc.to_short_unc_opt(self.disallow_long)
+            if long_unc.is_sub_prefix_unc()
+                && !long_unc.has_invalid_chars()
+                && (!self.disallow_long || !long_unc.is_short_unc_longer_than_max_path())
             {
-                return Ok(Some(Cow::Owned(unc)));
+                return Ok(Some(Cow::Owned(long_unc.to_short_unc())));
             }
         }
 
