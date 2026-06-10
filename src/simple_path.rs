@@ -133,6 +133,7 @@ impl SimplePath {
     fn _simplify<'a>(&self, path: &'a Path) -> anyhow::Result<Option<Cow<'a, Path>>> {
         // Try mapped network share drives if long UNC.
         if let Ok(long_unc) = LongUnc::try_from(path)
+            && long_unc.is_sub_prefix_unc()
             && let Some(drive_path) = self.drive_path(path)?
         {
             if self.map_to_drive
@@ -142,8 +143,7 @@ impl SimplePath {
             {
                 return Ok(Some(Cow::Owned(drive_path.to_path_buf())));
             }
-            if long_unc.is_sub_prefix_unc()
-                && !long_unc.has_invalid_chars()
+            if !long_unc.has_invalid_chars()
                 && (!self.disallow_long || !long_unc.is_short_unc_longer_than_max_path())
             {
                 return Ok(Some(Cow::Owned(long_unc.to_short_unc())));
