@@ -1,8 +1,9 @@
-use crate::{DrivePath, PathExt};
+use crate::{DrivePath, PWSTRExt, PathExt};
 use std::{
     borrow::Cow,
     cmp::Ordering,
     collections::HashMap,
+    ffi::{OsStr, OsString},
     fs,
     path::{Path, PathBuf},
     sync::{LazyLock, Mutex},
@@ -185,13 +186,13 @@ impl Volume {
             }
             let remote = Self::normalize_remote(&remote);
             let drive_letter = Self::drive_letter_from_local(&local);
-            volumes.push(Volume::new(drive_letter, remote.as_ref()));
+            volumes.push(Volume::new(drive_letter, &*remote));
         }
         log::trace!("Net: elapsed {:?}", start.elapsed());
         Ok(volumes)
     }
 
-    unsafe fn _get_net_resources() -> windows::core::Result<Vec<(String, String)>> {
+    unsafe fn _get_net_resources() -> windows::core::Result<Vec<(OsString, OsString)>> {
         let mut shares = Vec::new();
         // for scope in [RESOURCE_CONNECTED, RESOURCE_REMEMBERED] {
         let mut henum = HANDLE::default();
@@ -233,29 +234,8 @@ impl Volume {
             let ptr = buffer.as_ptr() as *const NETRESOURCEW;
             for i in 0..entries {
                 let resource = unsafe { &*ptr.add(i) };
-                let remote_name = if resource.lpRemoteName.is_null() {
-                    log::warn!("lpRemoteName null");
-                    continue;
-                } else {
-                    match unsafe { resource.lpRemoteName.to_string() } {
-                        Ok(str) => str,
-                        Err(error) => {
-                            log::warn!("lpRemoteName invalid: {error}");
-                            continue;
-                        }
-                    }
-                };
-                let local_name = if resource.lpLocalName.is_null() {
-                    String::new()
-                } else {
-                    match unsafe { resource.lpLocalName.to_string() } {
-                        Ok(str) => str,
-                        Err(error) => {
-                            log::warn!("lpLocalName for {remote_name:?} invalid: {error}");
-                            String::new()
-                        }
-                    }
-                };
+                let remote_name = resource.lpRemoteName.to_os_string();
+                let local_name = resource.lpLocalName.to_os_string();
                 log::trace!("Net: {local_name:?} {remote_name:?}");
                 shares.push((local_name, remote_name));
             }
@@ -264,18 +244,25 @@ impl Volume {
         Ok(shares)
     }
 
-    fn drive_letter_from_local(local: &str) -> char {
-        if local.len() == 2 && local.as_bytes()[1] == b':' {
-            local.as_bytes()[0] as char
-        } else {
-            '\0'
+    fn drive_letter_from_local(local: &OsStr) -> char {
+        if local.len() == 2 && local.as_encoded_bytes()[1] == b':' {
+            return local.as_encoded_bytes()[0] as char;
         }
+        '\0'
     }
 
-    fn normalize_remote<'a>(mut remote: &'a str) -> Cow<'a, str> {
-        remote = remote.trim_end_matches('\\');
-        if let Some(stripped) = remote.strip_prefix(r"\\") {
-            return Cow::Owned(format!(r"\\?\UNC\{}", stripped));
+    fn normalize_remote<'a>(mut remote: &'a OsStr) -> Cow<'a, OsStr> {
+        let mut bytes = remote.as_encoded_bytes();
+        while matches!(bytes.last(), Some(b'\\')) {
+            bytes = &bytes[..bytes.len() - 1];
+        }
+        if let Some(stripped) = bytes.strip_prefix(br"\\") {
+            let mut path = OsString::from(r"\\?\UNC\");
+            path.push(unsafe { OsStr::from_encoded_bytes_unchecked(stripped) });
+            return Cow::Owned(path);
+        }
+        if bytes.len() != remote.len() {
+            remote = unsafe { OsStr::from_encoded_bytes_unchecked(bytes) };
         }
         Cow::Borrowed(remote)
     }
@@ -356,5 +343,20 @@ mod tests {
             volumes._drive_path(Path::new(r"\\?\UNC\server0\share0\dir\file.txt")),
             Some(DrivePath::new('\0', Path::new(r"dir\file.txt")))
         );
+    }
+
+    #[test]
+    fn normalize_remote() {
+        let test_cases = [
+            (r"\\server\share", r"\\?\UNC\server\share"),
+            (r"\\server\share\", r"\\?\UNC\server\share"),
+            (r"\\server\share\\", r"\\?\UNC\server\share"),
+            (r"C:\foo", r"C:\foo"),
+            (r"C:\foo\", r"C:\foo"),
+        ];
+        for (input, expected) in test_cases {
+            let res = Volume::normalize_remote(OsStr::new(input));
+            assert_eq!(&*res, OsStr::new(expected), "input: {}", input);
+        }
     }
 }

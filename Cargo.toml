@@ -1,6 +1,6 @@
 [package]
 name = "simple-path"
-version = "0.3.3"
+version = "0.3.4"
 edition = "2024"
 rust-version = "1.88"
 description = "Simplify Windows UNC path for `fs::canonicalize`"
