@@ -1,4 +1,8 @@
-use std::{ffi::OsStr, os::windows::ffi::OsStrExt as _};
+use std::{
+    ffi::{OsStr, OsString},
+    os::windows::ffi::{OsStrExt as _, OsStringExt},
+};
+use windows::core::PWSTR;
 
 pub(crate) trait OsStrExt {
     fn has_win_invalid_chars(&self) -> bool;
@@ -34,6 +38,22 @@ impl OsStrExt for OsStr {
 /// '/' and '\\' are excluded, as this function is for a path, not a file name.
 fn is_win_invalid_path_char(ch: u8) -> bool {
     ch == b'<' || ch == b'>' || ch == b':' || ch == b'"' || ch == b'|' || ch == b'?' || ch == b'*'
+}
+
+pub(crate) trait PWSTRExt {
+    fn to_os_string(&self) -> OsString;
+}
+
+impl PWSTRExt for PWSTR {
+    fn to_os_string(&self) -> OsString {
+        if self.is_null() {
+            return OsString::new();
+        }
+        unsafe {
+            let slice = self.as_wide();
+            OsString::from_wide(slice)
+        }
+    }
 }
 
 #[cfg(test)]

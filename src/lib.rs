@@ -22,7 +22,7 @@ pub(crate) use drive_path::DrivePath;
 #[cfg(windows)]
 pub(crate) use long_unc::LongUnc;
 #[cfg(windows)]
-pub(crate) use os_str_ext::OsStrExt;
+pub(crate) use os_str_ext::{OsStrExt, PWSTRExt};
 #[cfg(windows)]
 pub(crate) use path_ext::PathExt;
 pub use simple_path::SimplePath;
