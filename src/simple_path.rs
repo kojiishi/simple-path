@@ -44,7 +44,26 @@ pub struct SimplePath {
     /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
     pub disallow_long: bool,
 
+    /// All long UNC prefixed by "`\\?\UNC\`" are simplified.
+    /// Initially `false`.
+    ///
+    /// Technically speaking,
+    /// since the `\\?` prefix ([Win32 File Namespaces]) is
+    /// to disable all string parsing and send it straight to the file system,
+    /// simplifying them may make the path invalid.
+    ///
+    /// For this reason,
+    /// it is limited only to the "`\\?\UNC\`" prefix,
+    /// and it is off by default.
+    ///
+    /// Other parameters such as `disallow_long` and `map_to_drive`
+    /// are still in effect even when this parameter is set to `true`.
+    ///
+    /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
+    pub allow_unknown_unc: bool,
+
     /// Map to network share drive names when possible.
+    /// Initially `false`.
     ///
     /// # Examples
     ///
@@ -131,27 +150,35 @@ impl SimplePath {
 
     #[cfg(windows)]
     fn _simplify<'a>(&self, path: &'a Path) -> anyhow::Result<Option<Cow<'a, Path>>> {
-        // Try mapped network share drives if long UNC.
         if let Ok(long_unc) = LongUnc::try_from(path)
             && long_unc.is_sub_prefix_unc()
-            && let Some(drive_path) = self.drive_path(path)?
         {
+            // Try mapped network drives.
+            let drive_path = if !self.allow_unknown_unc || self.map_to_drive {
+                self.drive_path(path)?
+            } else {
+                None
+            };
             if self.map_to_drive
+                && let Some(drive_path) = &drive_path
                 && drive_path.has_drive()
                 && !drive_path.has_invalid_chars()
                 && (!self.disallow_long || !drive_path.is_longer_than_max_path())
             {
                 return Ok(Some(Cow::Owned(drive_path.to_path_buf())));
             }
-            if !long_unc.has_invalid_chars()
+
+            // Try short UNC (`\\server\share`).
+            if (self.allow_unknown_unc || drive_path.is_some())
+                && !long_unc.has_invalid_chars()
                 && (!self.disallow_long || !long_unc.is_short_unc_longer_than_max_path())
             {
                 return Ok(Some(Cow::Owned(long_unc.to_short_unc())));
             }
         }
 
+        // Try `dunce::simplified`.
         if !self.skip_dunce {
-            // Try `dunce::simplified`.
             let simplified = dunce::simplified(path);
             if !std::ptr::eq(path, simplified) {
                 return Ok(Some(Cow::Borrowed(simplified)));
@@ -226,16 +253,12 @@ fn io_error_from_anyhow(error: anyhow::Error) -> io::Error {
 mod tests {
     use super::*;
 
-    #[test]
-    fn simplify_not_simplified() {
-        let simple = SimplePath::default();
-        assert_eq!(simple.simplify(Path::new(r"C:\foo")).unwrap(), None);
-    }
-
     #[cfg(windows)]
     #[test]
-    fn simplify_drive_not_simplified() {
-        let simple = SimplePath::mock();
+    fn simplify_drive() {
+        let mut simple = SimplePath::mock();
+        assert_eq!(simple.simplify(Path::new(r"C:\foo")).unwrap(), None);
+        simple.allow_unknown_unc = true;
         assert_eq!(simple.simplify(Path::new(r"C:\foo")).unwrap(), None);
     }
 
@@ -302,5 +325,38 @@ mod tests {
             simple.simplify(path).unwrap(),
             Some(Cow::Owned(PathBuf::from(r"\\server0\share0\foo")))
         );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn simplify_unknown_unc() -> anyhow::Result<()> {
+        let mut simple = SimplePath::mock();
+        let unknown = Path::new(r"\\?\UNC\server\unknown\foo");
+        let mapped = Path::new(r"\\?\UNC\server\share\foo");
+        assert_eq!(simple.simplify(unknown)?, None);
+
+        // `unknown` should be simplified if `allow_unknown_unc`.
+        simple.allow_unknown_unc = true;
+        assert_eq!(
+            simple.simplify(unknown)?,
+            Some(Cow::Owned(PathBuf::from(r"\\server\unknown\foo")))
+        );
+        assert_eq!(
+            simple.simplify(mapped)?,
+            Some(Cow::Owned(PathBuf::from(r"\\server\share\foo")))
+        );
+
+        // `map_to_drive` should still be in effect.
+        simple.map_to_drive = true;
+        assert_eq!(
+            simple.simplify(mapped)?,
+            Some(Cow::Owned(PathBuf::from(r"X:\foo")))
+        );
+
+        // `allow_unknown_unc` should simplify only for "`\\?\UNC\`".
+        assert_eq!(simple.simplify(Path::new(r"\\.\COM1:"))?, None);
+        simple.skip_dunce = true;
+        assert_eq!(simple.simplify(Path::new(r"\\?\C:\foo"))?, None);
+        Ok(())
     }
 }
