@@ -161,8 +161,13 @@ impl Volume {
                 let drive_type = unsafe { GetDriveTypeW(PCWSTR(path_u16.as_ptr())) };
                 if drive_type == DRIVE_REMOTE {
                     // Use `fs::canonicalize` to match the expected inputs.
-                    let canonicalized = fs::canonicalize(path)?;
+                    let canonicalized = fs::canonicalize(path);
                     log::trace!("Drive: {drive_letter:?} {path:?} {canonicalized:?}");
+                    let Ok(canonicalized) = canonicalized else {
+                        // Skip failed drives. This could be, for example,
+                        // a disconnected drive due to incorrect user/password.
+                        continue;
+                    };
                     drives.push(Self::new(drive_letter, canonicalized));
                 }
             }
