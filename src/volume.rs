@@ -229,7 +229,6 @@ impl Volume {
                 NO_ERROR => {}
                 ERROR_NO_MORE_ITEMS => break,
                 ERROR_MORE_DATA => {
-                    buffer_size *= 2;
                     buffer.resize(buffer_size as usize, 0);
                     continue;
                 }
