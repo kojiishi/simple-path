@@ -4,7 +4,7 @@ use std::{
     path::{self, Path},
 };
 
-/// Helper struct for safely printing paths with [`format!`] and `{}`.
+/// Helper struct for printing simplified paths with [`format!`] and `{}`.
 ///
 /// Please see [`SimplePath::display`].
 #[derive(Debug)]

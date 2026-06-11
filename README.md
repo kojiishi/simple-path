@@ -38,18 +38,17 @@ and [releases] for the change history.
 ## Safety
 
 Technically speaking,
-the "`\\?\`" prefix ([Win32 File Namespaces]) is
+since the "`\\?\`" prefix ([Win32 File Namespaces]) means
 to disable all string parsing and
-to send the string that follows it straight to the file system.
+to send the string that follows it straight to the file system,
+simplifying them is not always guaranteed to be safe and equivalent.
 
-For this reason,
-simplifying them is not guaranteed to be safe.
 The `SimplePath` simplifies them
-if all the following conditions are true.
-* It is prefixed by "`\\?\UNC\`" (not only "`\\?\`").
+if all the following conditions are met.
+* It is prefixed by "`\\?\UNC\`" (not only by "`\\?\`").
   - Note: other prefixes such as "`\\?\C:`" are simplified by [`dunce`],
     which is included by default.
-* It doesn't have any invalid characters defined in the [Naming Conventions].
+* It doesn't have any invalid characters defined by the [Naming Conventions].
 * The UNC is "connected" on the PC.
   That is,
   the UNC is shown in the File Explorer,
@@ -62,12 +61,12 @@ You can disable this behavior by [`disallow_long`].
 ## Examples
 
 When your PC has a network share on the `Z:` drive,
-either by the File Explorer or by the following command line:
+either by the File Explorer or by the command line such as:
 ```
 net use Z: \\server\share
 ```
 
-The following code prints "`\\?\UNC\server\share\dir\file`".
+Then canonicalizing "`Z:\dir\file`" will be "`\\?\UNC\server\share\dir\file`".
 Neither PowerShell nor `cmd.exe` can handle this path.
 ```rust
 let path = r"Z:\dir\file";
@@ -108,7 +107,8 @@ println!("{}", simplified.display());
 The `SimplePath` calls the [`dunce` crate]
 to normalize some other cases, such as:
 `\\?\C:\foo` to `C:\foo`.
-You can skip the [`dunce` crate] simplification if you prefer.
+You can skip the [`dunce` crate] simplification
+by the [`skip_dunce`] option.
 ```rust
 let simple = SimplePath { skip_dunce: true, ..Default::default() };
 ```
@@ -128,4 +128,5 @@ though your programs should build and run fine without doing so.
 [`map_to_drive`]: https://docs.rs/simple-path/latest/simple_path/struct.SimplePath.html#structfield.map_to_drive
 [Naming Conventions]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#naming-conventions
 [releases]: https://github.com/kojiishi/simple-path/releases
+[`skip_dunce`]: https://docs.rs/simple-path/latest/simple_path/struct.SimplePath.html#structfield.skip_dunce
 [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces

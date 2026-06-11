@@ -29,9 +29,9 @@ use std::{
 /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
 #[derive(Clone, Debug, Default)]
 pub struct SimplePath {
-    /// When set to `true`,
-    /// the simplification is disabled
+    /// Disallow simplifications
     /// if the result is a "long path" (longer than 260 characters).
+    /// Initially `false`.
     ///
     /// Long paths may not be supported by some programs and APIs.
     /// In such cases, the [Win32 File Namespaces] (the "`\\?\`" prefix)
@@ -44,21 +44,25 @@ pub struct SimplePath {
     /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
     pub disallow_long: bool,
 
-    /// All long UNC prefixed by "`\\?\UNC\`" are simplified.
+    /// Simplify all long UNCs (prefixed by "`\\?\UNC\`").
     /// Initially `false`.
     ///
     /// Technically speaking,
-    /// since the `\\?` prefix ([Win32 File Namespaces]) is
+    /// since the `\\?` prefix ([Win32 File Namespaces]) means
     /// to disable all string parsing and send it straight to the file system,
-    /// simplifying them may make the path invalid.
+    /// simplifying them is not always guaranteed to be safe and equivalent.
     ///
     /// For this reason,
-    /// it is limited only to the "`\\?\UNC\`" prefix,
-    /// and it is off by default.
+    /// this option is `false` by default,
+    /// and the simplification is limited only to the "`\\?\UNC\`" prefix
+    /// even when this option is set to `true`.
     ///
-    /// Other parameters such as `disallow_long` and `map_to_drive`
-    /// are still in effect even when this parameter is set to `true`.
+    /// Other options such as `disallow_long` and `map_to_drive`
+    /// are still in effect even when this option is set to `true`.
     ///
+    /// Please also see the [safety] note.
+    ///
+    /// [safety]: https://github.com/kojiishi/simple-path#safety
     /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
     pub allow_unknown_unc: bool,
 
@@ -95,6 +99,7 @@ pub struct SimplePath {
 
     /// The [`dunce`] simplification is applied by default.
     /// Set to `true` to skip it.
+    /// Initially `false`.
     ///
     /// [`dunce`]: https://crates.io/crates/dunce
     pub skip_dunce: bool,
