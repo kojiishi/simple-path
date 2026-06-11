@@ -32,27 +32,50 @@ so that these programs can handle.
 | `SimplePath` | `C:\dir` | `\\server\share\x` |
 | `SimplePath` with [map to drive] | `C:\dir` | `Z:\x` |
 
-Since the simplification may not always be safe,
-it does so if they are currently mapped to drives.
+Please see the [documentation][docs] for more details,
+and [releases] for the change history.
 
-Please see the [documentation][docs] for more details.
+## Safety
+
+Technically speaking,
+the "`\\?\`" prefix ([Win32 File Namespaces]) is
+to disable all string parsing and
+to send the string that follows it straight to the file system.
+
+For this reason,
+simplifying them is not guaranteed to be safe.
+The `SimplePath` simplifies them
+if all the following conditions are true.
+* It is prefixed by "`\\?\UNC\`" (not only "`\\?\`").
+  - Note: other prefixes such as "`\\?\C:`" are simplified by [`dunce`],
+    which is included by default.
+* It doesn't have any invalid characters defined in the [Naming Conventions].
+* The UNC is "connected" on the PC.
+  That is,
+  the UNC is shown in the File Explorer,
+  or in the list of connections when you run `net use` from the command line.
+  - Note: this condition can be relaxed by [`allow_unknown_unc`].
+
+The "long paths" (paths longer than 260 characters) are simplified by default.
+You can disable this behavior by [`disallow_long`].
 
 ## Examples
 
-When your PC has a network share on the `Z:` drive:
+When your PC has a network share on the `Z:` drive,
+either by the File Explorer or by the following command line:
 ```
 net use Z: \\server\share
 ```
-If you run the following code on this PC:
+
+The following code prints "`\\?\UNC\server\share\dir\file`".
+Neither PowerShell nor `cmd.exe` can handle this path.
 ```rust
 let path = r"Z:\dir\file";
 let canonicalized = fs::canonicalize(path)?;
 println!("{}", canonicalized.display());
 ```
-prints "`\\?\UNC\server\share\dir\file`".
-Neither PowerShell nor `cmd.exe` can handle this path.
 
-The `SimplePath` prints "`\\server\share\dir\file`" instead.
+Using the `SimplePath` prints "`\\server\share\dir\file`" instead.
 ```rust
 let path = r"Z:\dir\file";
 let simplified = SimplePath::default().canonicalize(path)?;
@@ -64,7 +87,7 @@ This path works fine for PowerShell and `cmd.exe`.
 ## Map to Drive
 [map to drive]: #map-to-drive
 
-If you prefer network drive names instead of UNC,
+If you prefer network drive names instead of UNC (`\\server\share`"),
 enable the [`map_to_drive`] option.
 
 The following code prints "`Z:\dir\file`"
@@ -80,11 +103,12 @@ println!("{}", simplified.display());
 ```
 
 ## Dunce
+[`dunce`]: #dunce
 
-The `SimplePath` calls the [`dunce`] crate
+The `SimplePath` calls the [`dunce` crate]
 to normalize some other cases, such as:
 `\\?\C:\foo` to `C:\foo`.
-You can skip the [`dunce`] simplification if you prefer:
+You can skip the [`dunce` crate] simplification if you prefer.
 ```rust
 let simple = SimplePath { skip_dunce: true, ..Default::default() };
 ```
@@ -97,7 +121,11 @@ the `SimplePath` returns without doing anything.
 You can wrap the calls with `#[cfg(windows)]` if you prefer,
 though your programs should build and run fine without doing so.
 
-[`dunce`]: https://crates.io/crates/dunce
+[`allow_unknown_unc`]: https://docs.rs/simple-path/latest/simple_path/struct.SimplePath.html#structfield.allow_unknown_unc
+[`disallow_long`]: https://docs.rs/simple-path/latest/simple_path/struct.SimplePath.html#structfield.disallow_long
+[`dunce` crate]: https://crates.io/crates/dunce
 [`fs::canonicalize`]: https://doc.rust-lang.org/std/fs/fn.canonicalize.html
 [`map_to_drive`]: https://docs.rs/simple-path/latest/simple_path/struct.SimplePath.html#structfield.map_to_drive
+[Naming Conventions]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#naming-conventions
+[releases]: https://github.com/kojiishi/simple-path/releases
 [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
