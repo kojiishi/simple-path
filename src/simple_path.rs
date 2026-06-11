@@ -27,7 +27,7 @@ use std::{
 ///
 /// [`map_to_drive`]: `SimplePath::map_to_drive`
 /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct SimplePath {
     /// When set to `true`,
     /// the simplification is disabled
