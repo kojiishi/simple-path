@@ -49,22 +49,16 @@ let path = r"Z:\dir\file";
 let canonicalized = fs::canonicalize(path)?;
 println!("{}", canonicalized.display());
 ```
-prints:
-```
-\\?\UNC\server\share\dir\file
-```
+prints "`\\?\UNC\server\share\dir\file`".
 Neither PowerShell nor `cmd.exe` can handle this path.
 
-With the `SimplePath`:
+The `SimplePath` prints "`\\server\share\dir\file`" instead.
 ```rust
 let path = r"Z:\dir\file";
 let simplified = SimplePath::default().canonicalize(path)?;
 println!("{}", simplified.display());
 ```
-prints:
-```
-\\server\share\dir\file
-```
+
 This path works fine for PowerShell and `cmd.exe`.
 
 ## Map to Drive
@@ -72,6 +66,9 @@ This path works fine for PowerShell and `cmd.exe`.
 
 If you prefer network drive names instead of UNC,
 enable the [`map_to_drive`] option.
+
+The following code prints "`Z:\dir\file`"
+instead of "`\\server\share\dir\file`".
 ```rust
 let path = r"Z:\dir\file";
 let simple = SimplePath {
@@ -81,22 +78,12 @@ let simple = SimplePath {
 let simplified = simple.canonicalize(path)?;
 println!("{}", simplified.display());
 ```
-The code above prints:
-```
-Z:\dir\file
-```
 
 ## Dunce
 
 The `SimplePath` calls the [`dunce`] crate
 to normalize some other cases, such as:
-```
-\\?\C:\foo
-```
-to:
-```
-C:\foo
-```
+`\\?\C:\foo` to `C:\foo`.
 You can skip the [`dunce`] simplification if you prefer:
 ```rust
 let simple = SimplePath { skip_dunce: true, ..Default::default() };
