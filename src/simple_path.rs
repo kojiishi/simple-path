@@ -69,6 +69,7 @@ pub struct SimplePath {
     /// # use std::path::Path;
     /// let path = Path::new(r"\\?\UNC\server\share\dir");
     /// let simple = SimplePath { allow_unknown_unc: true, ..Default::default() };
+    /// #[cfg(windows)]
     /// assert_eq!(&*simple.simplify(path).unwrap().unwrap(), r"\\server\share\dir");
     /// ```
     ///
