@@ -32,16 +32,16 @@ so that these programs can handle.
 | `SimplePath` | `C:\dir` | `\\server\share\x` |
 | `SimplePath` with [map to drive] | `C:\dir` | `Z:\x` |
 
-Please see the [documentation][docs] for more details,
+Please see the [library documentation][docs] for more details,
 and [releases] for the change history.
 
 ## Safety
 
 Technically speaking,
-since the "`\\?\`" prefix ([Win32 File Namespaces]) means
-to disable all string parsing and
-to send the string that follows it straight to the file system,
-simplifying them is not always guaranteed to be safe and equivalent.
+since the "`\\?\`" prefix ([Win32 File Namespaces])
+disables all string parsing and
+sends the following string directly to the file system,
+simplifying the path is not always guaranteed to be safe or equivalent.
 
 The `SimplePath` simplifies them
 if all the following conditions are met.
@@ -49,14 +49,14 @@ if all the following conditions are met.
   - Note: other prefixes such as "`\\?\C:`" are simplified by [`dunce`],
     which is included by default.
 * It doesn't have any invalid characters defined by the [Naming Conventions].
-* The UNC is "connected" on the PC.
+* The UNC path is "connected" on the PC.
   That is,
-  the UNC is shown in the File Explorer,
+  the network share is listed in the File Explorer,
   or in the list of connections when you run `net use` from the command line.
   - Note: this condition can be relaxed by [`allow_unknown_unc`].
 
 The "long paths" (paths longer than 260 characters) are simplified by default.
-You can disable this behavior by [`disallow_long`].
+You can disable long paths being simplified by [`disallow_long`].
 
 ## Examples
 
@@ -77,8 +77,8 @@ println!("{}", canonicalized.display());
 Using the `SimplePath` prints "`\\server\share\dir\file`" instead.
 ```rust
 let path = r"Z:\dir\file";
-let simplified = SimplePath::default().canonicalize(path)?;
-println!("{}", simplified.display());
+let canonicalized = SimplePath::default().canonicalize(path)?;
+println!("{}", canonicalized.display());
 ```
 
 This path works fine for PowerShell and `cmd.exe`.

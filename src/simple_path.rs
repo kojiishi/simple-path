@@ -34,33 +34,43 @@ pub struct SimplePath {
     /// Initially `false`.
     ///
     /// Long paths may not be supported by some programs and APIs.
-    /// In such cases, the [Win32 File Namespaces] (the "`\\?\`" prefix)
-    /// may be able to work around the limitation.
+    /// In such cases, using the [Win32 File Namespaces] (the "`\\?\`" prefix)
+    /// can often work around the limitation.
+    /// Setting this option to `true` can improve
+    /// the compatibility with such cases.
     ///
-    /// On the other hand,
-    /// other programs such as PowerShell v7 can't handle the "`\\?\`" prefix,
-    /// but it can handle long paths.
+    /// On the other hand, some other programs such as PowerShell v7
+    /// can handle long paths,
+    /// but they can't handle the "`\\?\`" prefix.
+    /// They work best with `false`.
     ///
     /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
     pub disallow_long: bool,
 
-    /// Simplify all long UNCs (prefixed by "`\\?\UNC\`").
+    /// Simplify all long UNC paths (prefixed by "`\\?\UNC\`").
     /// Initially `false`.
     ///
     /// Technically speaking,
-    /// since the `\\?` prefix ([Win32 File Namespaces]) means
-    /// to disable all string parsing and send it straight to the file system,
-    /// simplifying them is not always guaranteed to be safe and equivalent.
+    /// since the "`\\?\`" prefix ([Win32 File Namespaces])
+    /// disables all string parsing and
+    /// sends the following string directly to the file system,
+    /// simplifying the path is not always guaranteed to be safe or equivalent.
     ///
     /// For this reason,
-    /// this option is `false` by default,
-    /// and the simplification is limited only to the "`\\?\UNC\`" prefix
-    /// even when this option is set to `true`.
-    ///
-    /// Other options such as `disallow_long` and `map_to_drive`
-    /// are still in effect even when this option is set to `true`.
+    /// the `SimplePath` simplifies connected network shares only by default.
+    /// Set this option to `true`
+    /// to simplify all paths prefixed by "`\\?\UNC\`".
     ///
     /// Please also see the [safety] note.
+    ///
+    /// # Examples
+    /// ```
+    /// # use simple_path::SimplePath;
+    /// # use std::path::Path;
+    /// let path = Path::new(r"\\?\UNC\server\share\dir");
+    /// let simple = SimplePath { allow_unknown_unc: true, ..Default::default() };
+    /// assert_eq!(&*simple.simplify(path).unwrap().unwrap(), r"\\server\share\dir");
+    /// ```
     ///
     /// [safety]: https://github.com/kojiishi/simple-path#safety
     /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
@@ -97,8 +107,7 @@ pub struct SimplePath {
     /// ```
     pub map_to_drive: bool,
 
-    /// The [`dunce`] simplification is applied by default.
-    /// Set to `true` to skip it.
+    /// Skip the [`dunce`] simplification.
     /// Initially `false`.
     ///
     /// [`dunce`]: https://crates.io/crates/dunce
@@ -125,10 +134,20 @@ impl SimplePath {
         }
     }
 
-    /// Calls [`fs::canonicalize`] and [`simplify`].
+    /// A snap-in replacement for [`fs::canonicalize`].
+    /// It calls [`fs::canonicalize`] and [`simplify`].
     ///
     /// On other platforms than Windows,
     /// this is equivalent to [`fs::canonicalize`].
+    ///
+    /// # Examples
+    /// ```
+    /// # fn test(path: &std::path::Path) -> std::io::Result<()> {
+    /// use simple_path::SimplePath;
+    /// let canonicalized = SimplePath::default().canonicalize(path)?;
+    /// println!("{}", canonicalized.display());
+    /// # Ok(()) }
+    /// ```
     ///
     /// [`fs::canonicalize`]: https://doc.rust-lang.org/std/fs/fn.canonicalize.html
     /// [`simplify`]: SimplePath::simplify
