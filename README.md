@@ -43,13 +43,14 @@ disables all string parsing and
 sends the following string directly to the file system,
 simplifying the path is not always guaranteed to be safe or equivalent.
 
-The `SimplePath` simplifies them
+The `SimplePath` simplifies paths
 if all the following conditions are met.
-* It is prefixed by "`\\?\UNC\`" (not only by "`\\?\`").
+* The path is prefixed by "`\\?\UNC\`" (not only by "`\\?\`").
   - Note: other prefixes such as "`\\?\C:`" are simplified by [`dunce`],
     which is included by default.
-* It doesn't have any invalid characters defined by the [Naming Conventions].
-* The UNC path is "connected" on the PC.
+* The path doesn't have any invalid characters
+  defined by the [Naming Conventions].
+* The path is "connected" on the PC.
   That is,
   the network share is listed in the File Explorer,
   or in the list of connections when you run `net use` from the command line.

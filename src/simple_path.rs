@@ -44,6 +44,9 @@ pub struct SimplePath {
     /// but they can't handle the "`\\?\`" prefix.
     /// They work best with `false`.
     ///
+    /// Please also see the [Maximum Path Length Limitation].
+    ///
+    /// [Maximum Path Length Limitation]: https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
     /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
     pub disallow_long: bool,
 
