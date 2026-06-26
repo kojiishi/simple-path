@@ -155,6 +155,7 @@ impl SimplePath {
     ///
     /// [`fs::canonicalize`]: https://doc.rust-lang.org/std/fs/fn.canonicalize.html
     /// [`simplify`]: SimplePath::simplify
+    #[inline]
     pub fn canonicalize(&self, path: impl AsRef<Path>) -> io::Result<PathBuf> {
         let canonicalized = fs::canonicalize(path)?;
         #[cfg(windows)]
@@ -169,6 +170,7 @@ impl SimplePath {
     /// Returns `Ok(None)`
     /// if no simplification is applied,
     /// or on other platforms than Windows.
+    #[inline]
     pub fn simplify<'a>(&self, path: &'a Path) -> io::Result<Option<Cow<'a, Path>>> {
         #[cfg(windows)]
         return self._simplify(path).map_err(io_error_from_anyhow);
@@ -216,6 +218,7 @@ impl SimplePath {
     }
 
     #[cfg(windows)]
+    #[inline]
     fn drive_path<'a>(&self, path: &'a Path) -> anyhow::Result<Option<crate::DrivePath<'a>>> {
         #[cfg(test)]
         if let Some(volumes) = &self.volumes {
