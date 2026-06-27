@@ -32,10 +32,12 @@ impl OsStrExt for OsStr {
     }
 }
 
-/// Naming Conventions.
-/// https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#naming-conventions
+/// Valid characters as defined by [Naming Conventions].
+///
 /// Byte-comparison is safe because all invalid characters are in ASCII.
 /// '/' and '\\' are excluded, as this function is for a path, not a file name.
+///
+/// [Naming Conventions]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#naming-conventions
 fn is_win_invalid_path_char(ch: u8) -> bool {
     ch == b'<' || ch == b'>' || ch == b':' || ch == b'"' || ch == b'|' || ch == b'?' || ch == b'*'
 }
