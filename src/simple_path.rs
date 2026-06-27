@@ -76,7 +76,7 @@ pub struct SimplePath {
     /// assert_eq!(&*simple.simplify(path).unwrap().unwrap(), r"\\server\share\dir");
     /// ```
     ///
-    /// [safety]: https://github.com/kojiishi/simple-path#safety
+    /// [safety]: https://github.com/kojiishi/simple-path#safety-and-equivalence
     /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
     pub allow_unknown_unc: bool,
 

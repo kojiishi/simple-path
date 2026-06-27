@@ -35,7 +35,8 @@ so that these programs can handle.
 Please see the [library documentation][docs] for more details,
 and [releases] for the change history.
 
-## Safety
+## Safety and Equivalence
+[safety]: #safety-and-equivalence
 
 Technically speaking,
 since the "`\\?\`" prefix ([Win32 File Namespaces])
