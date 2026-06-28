@@ -7,6 +7,8 @@ mod display;
 #[cfg(windows)]
 mod drive_path;
 #[cfg(windows)]
+mod net_resource;
+#[cfg(windows)]
 mod os_str_ext;
 #[cfg(windows)]
 mod path_ext;
@@ -19,6 +21,8 @@ mod win32_file_namespace_path;
 pub use display::Display;
 #[cfg(windows)]
 pub(crate) use drive_path::DrivePath;
+#[cfg(windows)]
+pub(crate) use net_resource::NetResource;
 #[cfg(windows)]
 pub(crate) use os_str_ext::{OsStrExt, WinStrExt};
 #[cfg(windows)]

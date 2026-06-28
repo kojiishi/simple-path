@@ -1,9 +1,7 @@
-use crate::{DrivePath, PathExt, WinStrExt};
+use crate::{DrivePath, NetResource, PathExt};
 use std::{
-    borrow::Cow,
     cmp::Ordering,
     collections::HashMap,
-    ffi::{OsStr, OsString},
     fs,
     path::{Path, PathBuf},
     sync::{LazyLock, Mutex},
@@ -11,11 +9,6 @@ use std::{
 };
 use windows::{
     Win32::{
-        Foundation::{ERROR_MORE_DATA, ERROR_NO_MORE_ITEMS, HANDLE, NO_ERROR},
-        NetworkManagement::WNet::{
-            NETRESOURCEW, RESOURCE_CONNECTED, RESOURCETYPE_DISK, WNET_OPEN_ENUM_USAGE,
-            WNetCloseEnum, WNetEnumResourceW, WNetOpenEnumW,
-        },
         Storage::FileSystem::{GetDriveTypeW, GetLogicalDrives},
         System::WindowsProgramming::DRIVE_REMOTE,
     },
@@ -181,94 +174,19 @@ impl Volume {
     }
 
     fn get_net_resources() -> anyhow::Result<Vec<Volume>> {
-        let start = Instant::now();
-        let resources = unsafe { Self::_get_net_resources() }?;
+        let resources = NetResource::get_all()?;
         let mut volumes = Vec::with_capacity(resources.len());
-        for (local, remote) in resources {
-            if remote.is_empty() {
-                log::warn!("Remote is empty for {local:?}");
+        for resource in resources {
+            if resource.remote.is_empty() {
+                log::warn!("Remote is empty for {resource:?}");
                 continue;
             }
-            let remote = Self::normalize_remote(&remote);
-            let drive_letter = Self::drive_letter_from_local(&local);
-            volumes.push(Volume::new(drive_letter, &*remote));
+            volumes.push(Volume::new(
+                resource.local_drive_letter(),
+                resource.remote_canonicalized(),
+            ));
         }
-        log::trace!("Net: elapsed {:?}", start.elapsed());
         Ok(volumes)
-    }
-
-    unsafe fn _get_net_resources() -> windows::core::Result<Vec<(OsString, OsString)>> {
-        let mut shares = Vec::new();
-        // for scope in [RESOURCE_CONNECTED, RESOURCE_REMEMBERED] {
-        let mut henum = HANDLE::default();
-        let res = unsafe {
-            WNetOpenEnumW(
-                RESOURCE_CONNECTED,
-                RESOURCETYPE_DISK,
-                WNET_OPEN_ENUM_USAGE(0),
-                None,
-                &mut henum,
-            )
-        };
-        if res != NO_ERROR {
-            return Err(windows::core::Error::from_hresult(res.to_hresult()));
-        }
-        let mut buffer = vec![0u8; 16384];
-        loop {
-            let mut count = 0xFFFFFFFF;
-            let mut buffer_size = buffer.len() as u32;
-            let res = unsafe {
-                WNetEnumResourceW(
-                    henum,
-                    &mut count,
-                    buffer.as_mut_ptr() as *mut _,
-                    &mut buffer_size,
-                )
-            };
-            match res {
-                NO_ERROR => {}
-                ERROR_NO_MORE_ITEMS => break,
-                ERROR_MORE_DATA => {
-                    buffer.resize(buffer_size as usize, 0);
-                    continue;
-                }
-                _ => return Err(windows::core::Error::from_hresult(res.to_hresult())),
-            }
-            let entries = count as usize;
-            let ptr = buffer.as_ptr() as *const NETRESOURCEW;
-            for i in 0..entries {
-                let resource = unsafe { &*ptr.add(i) };
-                let remote_name = resource.lpRemoteName.to_os_string();
-                let local_name = resource.lpLocalName.to_os_string();
-                log::trace!("Net: {local_name:?} {remote_name:?}");
-                shares.push((local_name, remote_name));
-            }
-        }
-        let _ = unsafe { WNetCloseEnum(henum) };
-        Ok(shares)
-    }
-
-    fn drive_letter_from_local(local: &OsStr) -> char {
-        if local.len() == 2 && local.as_encoded_bytes()[1] == b':' {
-            return local.as_encoded_bytes()[0] as char;
-        }
-        '\0'
-    }
-
-    fn normalize_remote<'a>(mut remote: &'a OsStr) -> Cow<'a, OsStr> {
-        let mut bytes = remote.as_encoded_bytes();
-        while matches!(bytes.last(), Some(b'\\')) {
-            bytes = &bytes[..bytes.len() - 1];
-        }
-        if let Some(stripped) = bytes.strip_prefix(br"\\") {
-            let mut path = OsString::from(r"\\?\UNC\");
-            path.push(unsafe { OsStr::from_encoded_bytes_unchecked(stripped) });
-            return Cow::Owned(path);
-        }
-        if bytes.len() != remote.len() {
-            remote = unsafe { OsStr::from_encoded_bytes_unchecked(bytes) };
-        }
-        Cow::Borrowed(remote)
     }
 }
 
@@ -285,7 +203,6 @@ mod tests {
     #[test]
     fn get_remote_volumes() {
         assert!(*LOG_INIT);
-
         let volumes = Volume::get_remote_volumes().unwrap();
         // As the result depends on the machine configuration, all this test can
         // check is if it doesn't fail.
@@ -347,20 +264,5 @@ mod tests {
             volumes._drive_path(Path::new(r"\\?\UNC\server0\share0\dir\file.txt")),
             Some(DrivePath::new('\0', Path::new(r"dir\file.txt")))
         );
-    }
-
-    #[test]
-    fn normalize_remote() {
-        let test_cases = [
-            (r"\\server\share", r"\\?\UNC\server\share"),
-            (r"\\server\share\", r"\\?\UNC\server\share"),
-            (r"\\server\share\\", r"\\?\UNC\server\share"),
-            (r"C:\foo", r"C:\foo"),
-            (r"C:\foo\", r"C:\foo"),
-        ];
-        for (input, expected) in test_cases {
-            let res = Volume::normalize_remote(OsStr::new(input));
-            assert_eq!(&*res, OsStr::new(expected), "input: {}", input);
-        }
     }
 }
