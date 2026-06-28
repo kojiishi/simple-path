@@ -5,17 +5,17 @@ use std::{
 };
 use windows::Win32::Foundation::MAX_PATH;
 
-/// Represents a path prefixed by `\\?\`.
-/// Also called [Win32 File Namespace],
-/// or Extended-Length Path.
+/// Represents a [Win32 File Namespace] path,
+/// which is prefixed by `\\?\`.
+/// Also called Extended-Length Path.
 ///
 /// [Win32 File Namespace]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
-pub(crate) struct LongUnc<'a> {
+pub(crate) struct Win32FileNamespacePath<'a> {
     /// The path with the `\\?\` prefix stripped.
     stripped: &'a [u8],
 }
 
-impl<'a> TryFrom<&'a [u8]> for LongUnc<'a> {
+impl<'a> TryFrom<&'a [u8]> for Win32FileNamespacePath<'a> {
     type Error = ();
 
     fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
@@ -26,7 +26,7 @@ impl<'a> TryFrom<&'a [u8]> for LongUnc<'a> {
     }
 }
 
-impl<'a, const N: usize> TryFrom<&'a [u8; N]> for LongUnc<'a> {
+impl<'a, const N: usize> TryFrom<&'a [u8; N]> for Win32FileNamespacePath<'a> {
     type Error = ();
 
     fn try_from(bytes: &'a [u8; N]) -> Result<Self, Self::Error> {
@@ -34,7 +34,7 @@ impl<'a, const N: usize> TryFrom<&'a [u8; N]> for LongUnc<'a> {
     }
 }
 
-impl<'a> TryFrom<&'a str> for LongUnc<'a> {
+impl<'a> TryFrom<&'a str> for Win32FileNamespacePath<'a> {
     type Error = ();
 
     fn try_from(str: &'a str) -> Result<Self, Self::Error> {
@@ -42,7 +42,7 @@ impl<'a> TryFrom<&'a str> for LongUnc<'a> {
     }
 }
 
-impl<'a> TryFrom<&'a Path> for LongUnc<'a> {
+impl<'a> TryFrom<&'a Path> for Win32FileNamespacePath<'a> {
     type Error = ();
 
     fn try_from(path: &'a Path) -> Result<Self, Self::Error> {
@@ -50,7 +50,7 @@ impl<'a> TryFrom<&'a Path> for LongUnc<'a> {
     }
 }
 
-impl<'a> LongUnc<'a> {
+impl<'a> Win32FileNamespacePath<'a> {
     const PREFIX: &'static [u8] = br"\\?\";
     const UNC_SUB_PREFIX: &'static [u8] = br"UNC\";
     const SHORT_UNC_PREFIX: &'static [u8] = br"\\";
@@ -109,21 +109,21 @@ mod tests {
 
     #[test]
     fn try_from() {
-        assert!(LongUnc::try_from(br"\\?\server\share\dir").is_ok());
-        assert!(LongUnc::try_from(br"\\?\C:\").is_ok());
-        assert!(LongUnc::try_from(br"\\?\").is_ok());
+        assert!(Win32FileNamespacePath::try_from(br"\\?\server\share\dir").is_ok());
+        assert!(Win32FileNamespacePath::try_from(br"\\?\C:\").is_ok());
+        assert!(Win32FileNamespacePath::try_from(br"\\?\").is_ok());
 
-        assert!(LongUnc::try_from(br"\\?").is_err());
-        assert!(LongUnc::try_from(br"\\server\share\dir").is_err());
-        assert!(LongUnc::try_from(br"\a\b").is_err());
+        assert!(Win32FileNamespacePath::try_from(br"\\?").is_err());
+        assert!(Win32FileNamespacePath::try_from(br"\\server\share\dir").is_err());
+        assert!(Win32FileNamespacePath::try_from(br"\a\b").is_err());
     }
 
-    fn from_bytes(bytes: &[u8]) -> LongUnc<'_> {
-        LongUnc::try_from(bytes).unwrap()
+    fn from_bytes(bytes: &[u8]) -> Win32FileNamespacePath<'_> {
+        Win32FileNamespacePath::try_from(bytes).unwrap()
     }
 
-    fn from_str(str: &str) -> LongUnc<'_> {
-        LongUnc::try_from(str).unwrap()
+    fn from_str(str: &str) -> Win32FileNamespacePath<'_> {
+        Win32FileNamespacePath::try_from(str).unwrap()
     }
 
     #[test]
