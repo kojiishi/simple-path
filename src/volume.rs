@@ -1,4 +1,4 @@
-use crate::{DrivePath, PWSTRExt, PathExt};
+use crate::{DrivePath, PathExt, WinStrExt};
 use std::{
     borrow::Cow,
     cmp::Ordering,

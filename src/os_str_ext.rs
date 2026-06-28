@@ -42,11 +42,11 @@ fn is_win_invalid_path_char(ch: u8) -> bool {
     ch == b'<' || ch == b'>' || ch == b':' || ch == b'"' || ch == b'|' || ch == b'?' || ch == b'*'
 }
 
-pub(crate) trait PWSTRExt {
+pub(crate) trait WinStrExt {
     fn to_os_string(&self) -> OsString;
 }
 
-impl PWSTRExt for PWSTR {
+impl WinStrExt for PWSTR {
     fn to_os_string(&self) -> OsString {
         if self.is_null() {
             return OsString::new();
