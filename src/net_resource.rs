@@ -68,7 +68,7 @@ impl NetResource {
                     local: src.lpLocalName.to_os_string(),
                     remote: src.lpRemoteName.to_os_string(),
                 };
-                log::trace!("get_all: {resource:?}");
+                log::trace!("enum: {src:?}, {resource:?}");
                 resources.push(resource);
             }
         }
