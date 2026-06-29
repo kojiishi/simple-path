@@ -1,4 +1,4 @@
-use crate::{DrivePath, NetResource, PathExt};
+use crate::{DrivePath, LogicalDrive, NetResource, PathExt};
 use std::{
     cmp::Ordering,
     collections::HashMap,
@@ -6,13 +6,6 @@ use std::{
     path::{Path, PathBuf},
     sync::{LazyLock, Mutex},
     time::Instant,
-};
-use windows::{
-    Win32::{
-        Storage::FileSystem::{GetDriveTypeW, GetLogicalDrives},
-        System::WindowsProgramming::DRIVE_REMOTE,
-    },
-    core::PCWSTR,
 };
 
 static VOLUMES: LazyLock<Mutex<Option<Volumes>>> = LazyLock::new(|| Mutex::new(None));
@@ -141,32 +134,18 @@ impl Volume {
 
     fn get_remote_drives() -> anyhow::Result<Vec<Self>> {
         let start = Instant::now();
-        let mut drive_mask = unsafe { GetLogicalDrives() };
-        if drive_mask == 0 {
-            return Err(windows::core::Error::from_thread().into());
-        }
         let mut drives = Vec::new();
-        for drive_letter in 'A'..='Z' {
-            if drive_mask & 1 != 0 {
-                let path_str = format!(r"{drive_letter}:\");
-                let path = Path::new(&path_str);
-                let path_u16 = path.to_wide_vec_with_nul();
-                let drive_type = unsafe { GetDriveTypeW(PCWSTR(path_u16.as_ptr())) };
-                if drive_type == DRIVE_REMOTE {
-                    // Use `fs::canonicalize` to match the expected inputs.
-                    let canonicalized = fs::canonicalize(path);
-                    log::trace!("Drive: {drive_letter:?} {path:?} {canonicalized:?}");
-                    let Ok(canonicalized) = canonicalized else {
-                        // Skip failed drives. This could be, for example,
-                        // a disconnected drive due to incorrect user/password.
-                        continue;
-                    };
-                    drives.push(Self::new(drive_letter, canonicalized));
-                }
-            }
-            drive_mask >>= 1;
-            if drive_mask == 0 {
-                break;
+        for drive in LogicalDrive::all()? {
+            if drive.is_remote() {
+                // Use `fs::canonicalize` to match the expected inputs.
+                let canonicalized = fs::canonicalize(drive.path());
+                log::trace!("Drive: {drive:?} -> {canonicalized:?}");
+                let Ok(canonicalized) = canonicalized else {
+                    // Skip failed drives. This could be, for example,
+                    // a disconnected drive due to incorrect user/password.
+                    continue;
+                };
+                drives.push(Self::new(drive.drive_letter, canonicalized));
             }
         }
         log::trace!("Drive: elapsed {:?}", start.elapsed());
