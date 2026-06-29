@@ -1,8 +1,5 @@
 use crate::PathExt;
-use std::{
-    iter::FusedIterator,
-    path::{Path, PathBuf},
-};
+use std::{iter::FusedIterator, path::Path};
 use windows::{
     Win32::{
         Storage::FileSystem::{GetDriveTypeW, GetLogicalDrives},
@@ -14,14 +11,14 @@ use windows::{
 #[derive(Debug)]
 pub(crate) struct LogicalDrive {
     pub(crate) drive_letter: char,
-    path: PathBuf,
+    path_str: String,
 }
 
 impl LogicalDrive {
     fn new(drive_letter: char) -> Self {
         Self {
             drive_letter,
-            path: PathBuf::from(format!(r"{}:\", drive_letter)),
+            path_str: format!(r"{drive_letter}:\"),
         }
     }
 
@@ -31,7 +28,7 @@ impl LogicalDrive {
 
     #[inline]
     pub(crate) fn path(&self) -> &Path {
-        &self.path
+        Path::new(&self.path_str)
     }
 
     fn drive_type(&self) -> u32 {
