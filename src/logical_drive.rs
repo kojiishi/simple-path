@@ -61,10 +61,7 @@ impl LogicalDriveIter {
     }
 
     fn with_mask(mask: u32) -> Self {
-        Self {
-            mask: mask << 1,
-            index: 0,
-        }
+        Self { mask, index: 0 }
     }
 }
 
@@ -73,12 +70,14 @@ impl Iterator for LogicalDriveIter {
 
     fn next(&mut self) -> Option<Self::Item> {
         while self.mask != 0 {
-            self.mask >>= 1;
-            self.index += 1;
             if self.mask & 1 != 0 {
-                let drive_letter = (self.index + b'A' - 1) as char;
+                let drive_letter = (self.index + b'A') as char;
+                self.mask >>= 1;
+                self.index += 1;
                 return Some(LogicalDrive::new(drive_letter));
             }
+            self.mask >>= 1;
+            self.index += 1;
         }
         None
     }
