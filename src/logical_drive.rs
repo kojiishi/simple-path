@@ -90,6 +90,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn print_logical_drives() -> anyhow::Result<()> {
+        // As the result depends on the machine configuration, all this test can
+        // check is if it doesn't fail.
+        // You can check the result manually by:
+        // ```
+        // cargo test -- print_logical_drives --nocapture
+        // ```
+        assert!(*crate::TEST_LOG_INIT);
+        for drive in LogicalDrive::all()? {
+            println!("{drive:?} {}", drive.drive_type());
+        }
+        Ok(())
+    }
+
+    #[test]
     fn iterator() {
         let vec_from_mask = |mask| -> Vec<char> {
             LogicalDriveIter::with_mask(mask)

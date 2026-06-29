@@ -36,3 +36,6 @@ pub use simple_path::SimplePath;
 pub(crate) use volume::Volumes;
 #[cfg(windows)]
 pub(crate) use win32_file_namespace_path::Win32FileNamespacePath;
+
+#[cfg(test)]
+pub(crate) use volume::TEST_LOG_INIT;

@@ -110,6 +110,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn print_net_resources() -> anyhow::Result<()> {
+        // As the result depends on the machine configuration, all this test can
+        // check is if it doesn't fail.
+        // You can check the result manually by:
+        // ```
+        // cargo test -- print_net_resources --nocapture
+        // ```
+        assert!(*crate::TEST_LOG_INIT);
+        for resource in NetResource::get_all()? {
+            println!("{resource:?}");
+        }
+        Ok(())
+    }
+
+    #[test]
     fn normalize_remote() {
         let test_cases = [
             (r"\\server\share", r"\\?\UNC\server\share"),

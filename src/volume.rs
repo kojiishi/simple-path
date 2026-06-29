@@ -170,7 +170,7 @@ impl Volume {
 }
 
 #[cfg(test)]
-static LOG_INIT: LazyLock<bool> = LazyLock::new(|| {
+pub(crate) static TEST_LOG_INIT: LazyLock<bool> = LazyLock::new(|| {
     env_logger::init();
     true
 });
@@ -180,15 +180,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn get_remote_volumes() {
-        assert!(*LOG_INIT);
-        let volumes = Volume::get_remote_volumes().unwrap();
+    fn print_remote_volumes() {
         // As the result depends on the machine configuration, all this test can
         // check is if it doesn't fail.
         // You can check the result manually by:
         // ```
-        // cargo test -- get_remote_volumes --nocapture
+        // cargo test -- print_remote_volumes --nocapture
         // ```
+        assert!(*TEST_LOG_INIT);
+        let volumes = Volume::get_remote_volumes().unwrap();
         for volume in volumes {
             println!("{volume:?}");
         }
