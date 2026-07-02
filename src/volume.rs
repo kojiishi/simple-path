@@ -153,9 +153,10 @@ impl Volume {
     }
 
     fn get_net_resources() -> anyhow::Result<Vec<Volume>> {
-        let resources = NetResource::get_all()?;
-        let mut volumes = Vec::with_capacity(resources.len());
-        for resource in resources {
+        let start = Instant::now();
+        let mut volumes = Vec::new();
+        for resource in NetResource::all()? {
+            let resource = resource?;
             if resource.remote.is_empty() {
                 log::warn!("Remote is empty for {resource:?}");
                 continue;
@@ -165,6 +166,7 @@ impl Volume {
                 resource.remote_canonicalized(),
             ));
         }
+        log::trace!("NetResource: elapsed {:?}", start.elapsed());
         Ok(volumes)
     }
 }
@@ -188,10 +190,12 @@ mod tests {
         // cargo test -- print_remote_volumes --nocapture
         // ```
         assert!(*TEST_LOG_INIT);
+        let start = Instant::now();
         let volumes = Volume::get_remote_volumes().unwrap();
         for volume in volumes {
             println!("{volume:?}");
         }
+        println!("Volume: elapsed {:?}", start.elapsed());
     }
 
     #[test]
