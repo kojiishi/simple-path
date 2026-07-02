@@ -24,28 +24,15 @@ pub(crate) struct NetResource {
 impl NetResource {
     pub(crate) fn get_all() -> windows::core::Result<Vec<Self>> {
         let start = Instant::now();
+        let net_enum = WNetEnum::new()?;
         let mut resources = Vec::new();
-        // for scope in [RESOURCE_CONNECTED, RESOURCE_REMEMBERED] {
-        let mut henum = HANDLE::default();
-        let res = unsafe {
-            WNetOpenEnumW(
-                RESOURCE_CONNECTED,
-                RESOURCETYPE_DISK,
-                WNET_OPEN_ENUM_USAGE(0),
-                None,
-                &mut henum,
-            )
-        };
-        if res != NO_ERROR {
-            return Err(windows::core::Error::from_hresult(res.to_hresult()));
-        }
         let mut buffer = vec![0u8; 16384];
         loop {
             let mut count = 0xFFFFFFFF;
             let mut buffer_size = buffer.len() as u32;
             let res = unsafe {
                 WNetEnumResourceW(
-                    henum,
+                    net_enum.henum,
                     &mut count,
                     buffer.as_mut_ptr() as *mut _,
                     &mut buffer_size,
@@ -72,7 +59,6 @@ impl NetResource {
                 resources.push(resource);
             }
         }
-        let _ = unsafe { WNetCloseEnum(henum) };
         log::trace!("get_all: elapsed {:?}", start.elapsed());
         Ok(resources)
     }
@@ -102,6 +88,36 @@ impl NetResource {
             remote = unsafe { OsStr::from_encoded_bytes_unchecked(bytes) };
         }
         Cow::Borrowed(remote)
+    }
+}
+
+#[derive(Debug)]
+struct WNetEnum {
+    henum: HANDLE,
+}
+
+impl WNetEnum {
+    fn new() -> windows::core::Result<Self> {
+        let mut henum = HANDLE::default();
+        let res = unsafe {
+            WNetOpenEnumW(
+                RESOURCE_CONNECTED,
+                RESOURCETYPE_DISK,
+                WNET_OPEN_ENUM_USAGE(0),
+                None,
+                &mut henum,
+            )
+        };
+        if res != NO_ERROR {
+            return Err(windows::core::Error::from_hresult(res.to_hresult()));
+        }
+        Ok(Self { henum })
+    }
+}
+
+impl Drop for WNetEnum {
+    fn drop(&mut self) {
+        let _ = unsafe { WNetCloseEnum(self.henum) };
     }
 }
 
