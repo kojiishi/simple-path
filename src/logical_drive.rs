@@ -88,6 +88,7 @@ impl FusedIterator for LogicalDriveIter {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Instant;
 
     #[test]
     fn print_logical_drives() -> anyhow::Result<()> {
@@ -98,9 +99,11 @@ mod tests {
         // cargo test -- print_logical_drives --nocapture
         // ```
         assert!(*crate::TEST_LOG_INIT);
+        let start = Instant::now();
         for drive in LogicalDrive::all()? {
             println!("{drive:?} {}", drive.drive_type());
         }
+        println!("Drive: elapsed {:?}", start.elapsed());
         Ok(())
     }
 
