@@ -11,6 +11,7 @@ pub(crate) trait PathExt {
 
     fn strip_prefix_fix(&self, base: impl AsRef<Path>) -> Result<&Path, StripPrefixError>;
     fn trim_leading_separator(&self) -> &Path;
+    fn trim_trailing_separator(&self) -> &Path;
 }
 
 impl PathExt for Path {
@@ -44,6 +45,16 @@ impl PathExt for Path {
         let mut components = self.components();
         if let Some(first) = components.next()
             && first == Component::RootDir
+        {
+            return components.as_path();
+        }
+        self
+    }
+
+    fn trim_trailing_separator(&self) -> &Path {
+        let mut components = self.components();
+        if let Some(last) = components.next_back()
+            && last == Component::RootDir
         {
             return components.as_path();
         }
@@ -86,5 +97,19 @@ mod tests {
         assert_eq!(Path::new("a").trim_leading_separator(), Path::new("a"));
         assert_eq!(Path::new("/a/b").trim_leading_separator(), Path::new("a/b"));
         assert_eq!(Path::new("a/b").trim_leading_separator(), Path::new("a/b"));
+    }
+
+    #[test]
+    fn trim_trailing_separator() {
+        assert_eq!(Path::new("/").trim_trailing_separator(), Path::new(""));
+        assert_eq!(Path::new("").trim_trailing_separator(), Path::new(""));
+        assert_eq!(Path::new("a/").trim_trailing_separator(), Path::new("a"));
+        assert_eq!(Path::new("a").trim_trailing_separator(), Path::new("a"));
+        assert_eq!(Path::new("a//").trim_trailing_separator(), Path::new("a"));
+        assert_eq!(
+            Path::new("a/b/").trim_trailing_separator(),
+            Path::new("a/b")
+        );
+        assert_eq!(Path::new("a/b").trim_trailing_separator(), Path::new("a/b"));
     }
 }
