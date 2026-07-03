@@ -1,7 +1,7 @@
 #![cfg_attr(not(target_os = "windows"), allow(unused))]
 use crate::Display;
 #[cfg(windows)]
-use crate::{PathExt, Volumes, Win32FileNamespacePath};
+use crate::{PathExt, UncPath, Volumes};
 use std::{
     borrow::Cow,
     fs, io,
@@ -180,8 +180,9 @@ impl SimplePath {
 
     #[cfg(windows)]
     fn _simplify<'a>(&self, path: &'a Path) -> anyhow::Result<Option<Cow<'a, Path>>> {
-        if let Ok(file_ns) = Win32FileNamespacePath::try_from(path)
-            && file_ns.is_sub_prefix_unc()
+        // If it starts with the `\\?\UNC\` prefix.
+        if let Ok(unc) = UncPath::try_from(path)
+            && unc.is_file_namespace_unc()
         {
             // Try mapped network drives.
             let drive_path = if !self.allow_unknown_unc || self.map_to_drive {
@@ -200,10 +201,11 @@ impl SimplePath {
 
             // Try short UNC (`\\server\share`).
             if (self.allow_unknown_unc || drive_path.is_some())
-                && !file_ns.has_invalid_chars()
-                && (!self.disallow_long || !file_ns.is_short_unc_longer_than_max_path())
+                && !unc.has_invalid_chars()
+                && let Some(short_unc) = unc.to_short_unc()
+                && (!self.disallow_long || !short_unc.is_longer_than_win_max_path())
             {
-                return Ok(Some(Cow::Owned(file_ns.to_short_unc())));
+                return Ok(Some(Cow::Owned(short_unc)));
             }
         }
 
