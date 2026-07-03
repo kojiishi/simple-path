@@ -13,7 +13,7 @@ impl<'a> TryFrom<&'a [u8]> for UncPath<'a> {
     type Error = ();
 
     fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
-        if bytes.starts_with(Self::UNC_PREFIX) {
+        if UncPath::is_unc_bytes(bytes) {
             let os_str = unsafe { OsStr::from_encoded_bytes_unchecked(bytes) };
             let path = Path::new(os_str);
             return Ok(Self { path });
@@ -26,8 +26,7 @@ impl<'a> TryFrom<&'a Path> for UncPath<'a> {
     type Error = ();
 
     fn try_from(path: &'a Path) -> Result<Self, Self::Error> {
-        let bytes = path.as_os_str().as_encoded_bytes();
-        if bytes.starts_with(Self::UNC_PREFIX) {
+        if UncPath::is_unc_bytes(path.as_os_str().as_encoded_bytes()) {
             return Ok(Self { path });
         }
         Err(())
@@ -45,8 +44,16 @@ impl<'a> TryFrom<&'a str> for UncPath<'a> {
 
 impl<'a> UncPath<'a> {
     const UNC_PREFIX: &'static [u8] = br"\\";
+    const FILE_NAMESPACE_CHAR: u8 = b'?';
     const FILE_NAMESPACE_PREFIX: &'static [u8] = br"?\";
     const UNC_KEYWORD: &'static [u8] = br"UNC";
+
+    #[inline]
+    fn is_unc_bytes(bytes: &[u8]) -> bool {
+        bytes.len() >= 2
+            && std::path::is_separator(bytes[0] as char)
+            && std::path::is_separator(bytes[1] as char)
+    }
 
     #[inline]
     fn path(&self) -> &Path {
@@ -72,14 +79,19 @@ impl<'a> UncPath<'a> {
     ///
     /// [Win32 File Namespace]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
     fn is_file_namespace(&self) -> bool {
-        self.as_stripped_encoded_bytes()
-            .starts_with(Self::FILE_NAMESPACE_PREFIX)
+        let bytes = self.as_stripped_encoded_bytes();
+        bytes.len() >= 2
+            && bytes[0] == Self::FILE_NAMESPACE_CHAR
+            && std::path::is_separator(bytes[1] as char)
     }
 
     // Bytes with the `\\?\` prefix stripped.
     fn as_file_namespace_stripped_encoded_bytes(&self) -> Option<&[u8]> {
-        self.as_stripped_encoded_bytes()
-            .strip_prefix(Self::FILE_NAMESPACE_PREFIX)
+        if self.is_file_namespace() {
+            Some(&self.as_stripped_encoded_bytes()[Self::FILE_NAMESPACE_PREFIX.len()..])
+        } else {
+            None
+        }
     }
 
     /// True if it starts with `\\?\UNC\`.
@@ -144,6 +156,12 @@ mod tests {
         assert!(UncPath::try_from(r"\\?\C:\").is_ok());
         assert!(UncPath::try_from(r"\\?\").is_ok());
 
+        assert!(UncPath::try_from(r"//server/share/dir").is_ok());
+        assert!(UncPath::try_from(r"//?").is_ok());
+        assert!(UncPath::try_from(r"//?/server/share/dir").is_ok());
+        assert!(UncPath::try_from(r"//?/C:/").is_ok());
+        assert!(UncPath::try_from(r"//?/").is_ok());
+
         assert!(UncPath::try_from(r"C:\a\b").is_err());
         assert!(UncPath::try_from(r"\a\b").is_err());
         assert!(UncPath::try_from(r"a\b").is_err());
@@ -159,6 +177,10 @@ mod tests {
         assert!(from_str(r"\\?\C:\server\share\dir").is_file_namespace());
         assert!(from_str(r"\\?\UNC\server\share\dir").is_file_namespace());
 
+        assert!(from_str(r"//?/").is_file_namespace());
+        assert!(from_str(r"//?/C:/server/share/dir").is_file_namespace());
+        assert!(from_str(r"//?/UNC/server/share/dir").is_file_namespace());
+
         assert!(!from_str(r"\\?").is_file_namespace());
         assert!(!from_str(r"\\??\").is_file_namespace());
         assert!(!from_str(r"\\server\share").is_file_namespace());
@@ -173,6 +195,9 @@ mod tests {
         assert!(from_str(r"\\?\uNc\server\share\dir").is_file_namespace_unc());
         assert!(from_str(r"\\?\UnC\server\share\dir").is_file_namespace_unc());
 
+        assert!(from_str(r"//?/UNC/server/share/dir").is_file_namespace_unc());
+        assert!(from_str(r"//?/UnC/server/share/dir").is_file_namespace_unc());
+
         assert!(!from_str(r"\\?\UN").is_file_namespace_unc());
         assert!(!from_str(r"\\?\UNC").is_file_namespace_unc());
         assert!(!from_str(r"\\?\UNCD\").is_file_namespace_unc());
@@ -185,6 +210,10 @@ mod tests {
             from_str(r"\\?\UNC\server\share\dir").to_short_unc(),
             Some(PathBuf::from(r"\\server\share\dir"))
         );
+        assert_eq!(
+            from_str(r"//?/UNC/server/share/dir").to_short_unc(),
+            Some(PathBuf::from(r"\\server\share\dir"))
+        );
         assert_eq!(from_str(r"\\server\share\dir").to_short_unc(), None);
         assert_eq!(from_str(r"\\.\device").to_short_unc(), None);
     }
@@ -194,6 +223,10 @@ mod tests {
         assert_eq!(
             from_str(r"\\server\share\dir").to_filename_space_unc(),
             Some(PathBuf::from(r"\\?\UNC\server\share\dir"))
+        );
+        assert_eq!(
+            from_str(r"//server/share/dir").to_filename_space_unc(),
+            Some(PathBuf::from(r"\\?\UNC\server/share/dir"))
         );
         assert_eq!(
             from_str(r"\\?\UNC\server\share\dir").to_filename_space_unc(),
