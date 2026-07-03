@@ -201,8 +201,8 @@ impl SimplePath {
 
             // Try short UNC (`\\server\share`).
             if (self.allow_unknown_unc || drive_path.is_some())
-                && !unc.has_invalid_chars()
                 && let Some(short_unc) = unc.to_short_unc()
+                && !short_unc.has_invalid_chars()
                 && (!self.disallow_long || !short_unc.is_longer_than_win_max_path())
             {
                 return Ok(Some(Cow::Owned(short_unc)));
