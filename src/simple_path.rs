@@ -50,7 +50,8 @@ pub struct SimplePath {
     /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
     pub disallow_long: bool,
 
-    /// Simplify all long UNC paths (prefixed by "`\\?\UNC\`").
+    /// Disables simplifications
+    /// if the path is not connected.
     /// Initially `false`.
     ///
     /// Technically speaking,
@@ -59,10 +60,9 @@ pub struct SimplePath {
     /// sends the following string directly to the file system,
     /// simplifying the path is not always guaranteed to be safe or equivalent.
     ///
-    /// For this reason,
-    /// the `SimplePath` simplifies connected network shares only by default.
-    /// Set this option to `true`
-    /// to simplify all paths prefixed by "`\\?\UNC\`".
+    /// Enable this option
+    /// to restrict simplification to verified paths,
+    /// providing an extra layer of safety.
     ///
     /// Please also see the [safety] note.
     ///
@@ -71,14 +71,14 @@ pub struct SimplePath {
     /// # use simple_path::SimplePath;
     /// # use std::path::Path;
     /// let path = Path::new(r"\\?\UNC\server\share\dir");
-    /// let simple = SimplePath { allow_unknown_unc: true, ..Default::default() };
+    /// let simple = SimplePath { disallow_unknown_unc: true, ..Default::default() };
     /// #[cfg(windows)]
-    /// assert_eq!(&*simple.simplify(path).unwrap().unwrap(), r"\\server\share\dir");
+    /// assert!(simple.simplify(path).unwrap().is_none());
     /// ```
     ///
     /// [safety]: https://github.com/kojiishi/simple-path#safety-and-equivalence
     /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
-    pub allow_unknown_unc: bool,
+    pub disallow_unknown_unc: bool,
 
     /// Map to network share drive names when possible.
     /// Initially `false`.
@@ -185,7 +185,7 @@ impl SimplePath {
             && unc.is_file_namespace_unc()
         {
             // Try mapped network drives.
-            let drive_path = if !self.allow_unknown_unc || self.map_to_drive {
+            let drive_path = if self.disallow_unknown_unc || self.map_to_drive {
                 self.drive_path(path)?
             } else {
                 None
@@ -200,7 +200,7 @@ impl SimplePath {
             }
 
             // Try short UNC (`\\server\share`).
-            if (self.allow_unknown_unc || drive_path.is_some())
+            if (!self.disallow_unknown_unc || drive_path.is_some())
                 && let Some(short_unc) = unc.to_short_unc()
                 && !short_unc.has_invalid_chars()
                 && (!self.disallow_long || !short_unc.is_longer_than_win_max_path())
@@ -291,7 +291,7 @@ mod tests {
     fn simplify_drive() {
         let mut simple = SimplePath::mock();
         assert_eq!(simple.simplify(Path::new(r"C:\foo")).unwrap(), None);
-        simple.allow_unknown_unc = true;
+        simple.disallow_unknown_unc = true;
         assert_eq!(simple.simplify(Path::new(r"C:\foo")).unwrap(), None);
     }
 
@@ -366,10 +366,6 @@ mod tests {
         let mut simple = SimplePath::mock();
         let unknown = Path::new(r"\\?\UNC\server\unknown\foo");
         let mapped = Path::new(r"\\?\UNC\server\share\foo");
-        assert_eq!(simple.simplify(unknown)?, None);
-
-        // `unknown` should be simplified if `allow_unknown_unc`.
-        simple.allow_unknown_unc = true;
         assert_eq!(
             simple.simplify(unknown)?,
             Some(Cow::Owned(PathBuf::from(r"\\server\unknown\foo")))
@@ -379,6 +375,10 @@ mod tests {
             Some(Cow::Owned(PathBuf::from(r"\\server\share\foo")))
         );
 
+        // `unknown` should not be simplified if `disallow_unknown_unc`.
+        simple.disallow_unknown_unc = true;
+        assert_eq!(simple.simplify(unknown)?, None);
+
         // `map_to_drive` should still be in effect.
         simple.map_to_drive = true;
         assert_eq!(
@@ -386,7 +386,7 @@ mod tests {
             Some(Cow::Owned(PathBuf::from(r"X:\foo")))
         );
 
-        // `allow_unknown_unc` should simplify only for "`\\?\UNC\`".
+        // `disallow_unknown_unc` should simplify only for "`\\?\UNC\`".
         assert_eq!(simple.simplify(Path::new(r"\\.\COM1:"))?, None);
         simple.skip_dunce = true;
         assert_eq!(simple.simplify(Path::new(r"\\?\C:\foo"))?, None);
