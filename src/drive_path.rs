@@ -18,7 +18,7 @@ impl<'a> DrivePath<'a> {
     }
 
     pub(crate) fn has_invalid_chars(&self) -> bool {
-        self.path.has_win_invalid_chars()
+        self.path.has_invalid_chars()
     }
 
     pub(crate) fn is_longer_than_max_path(&self) -> bool {

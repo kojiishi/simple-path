@@ -1,9 +1,13 @@
 use crate::OsStrExt;
-use std::path::{Component, Path, StripPrefixError};
+use std::path::{
+    Component, Path,
+    Prefix::{UNC, Verbatim, VerbatimUNC},
+    StripPrefixError,
+};
 use windows::Win32::Foundation::MAX_PATH;
 
 pub(crate) trait PathExt {
-    fn has_win_invalid_chars(&self) -> bool;
+    fn has_invalid_chars(&self) -> bool;
 
     fn is_longer_than_wide(&self, max: u32) -> bool;
     fn is_longer_than_win_max_path(&self) -> bool;
@@ -15,8 +19,24 @@ pub(crate) trait PathExt {
 }
 
 impl PathExt for Path {
-    fn has_win_invalid_chars(&self) -> bool {
-        self.as_os_str().has_win_invalid_chars()
+    fn has_invalid_chars(&self) -> bool {
+        let mut components = self.components();
+        match components.next() {
+            None => false,
+            Some(Component::Prefix(prefix)) => match prefix.kind() {
+                Verbatim(str) => {
+                    str.has_invalid_path_chars()
+                        || components.as_path().as_os_str().has_invalid_path_chars()
+                }
+                UNC(server, share) | VerbatimUNC(server, share) => {
+                    server.has_invalid_path_chars()
+                        || share.has_invalid_path_chars()
+                        || components.as_path().as_os_str().has_invalid_path_chars()
+                }
+                _ => components.as_path().as_os_str().has_invalid_path_chars(),
+            },
+            _ => self.as_os_str().has_invalid_path_chars(),
+        }
     }
 
     fn is_longer_than_wide(&self, max: u32) -> bool {
@@ -65,6 +85,45 @@ impl PathExt for Path {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn has_invalid_chars() {
+        assert!(Path::new(":").has_invalid_chars());
+        assert!(Path::new(r"a\:").has_invalid_chars());
+        assert!(Path::new(r"a\>").has_invalid_chars());
+        assert!(Path::new(r"a\dir:dir").has_invalid_chars());
+        assert!(Path::new(r"dir:\a").has_invalid_chars());
+        assert!(Path::new(r"C:\dir:").has_invalid_chars());
+        assert!(Path::new(r"\\server:\share\dir").has_invalid_chars());
+        assert!(Path::new(r"\\server\share:\dir").has_invalid_chars());
+        assert!(Path::new(r"\\server\share\dir:").has_invalid_chars());
+        assert!(Path::new(r"\\?\UNC\server:\share\dir").has_invalid_chars());
+        assert!(Path::new(r"\\?\UNC\server\share:\dir").has_invalid_chars());
+        assert!(Path::new(r"\\?\UNC\server\share\dir:").has_invalid_chars());
+        assert!(Path::new(r"\\?\UNC\foo:").has_invalid_chars());
+        assert!(Path::new(r"\\?\UNC\foo>").has_invalid_chars());
+        assert!(Path::new(r"\\?\C:\foo:").has_invalid_chars());
+        assert!(Path::new(r"\\?\:\foo").has_invalid_chars());
+        assert!(Path::new(r"\\?\>\foo").has_invalid_chars());
+
+        assert!(!Path::new("").has_invalid_chars());
+        assert!(!Path::new("a").has_invalid_chars());
+        assert!(!Path::new(r"a\b").has_invalid_chars());
+        assert!(!Path::new(r"\a\b").has_invalid_chars());
+        assert!(!Path::new(r"C:\").has_invalid_chars());
+        assert!(!Path::new(r"C:\dir").has_invalid_chars());
+        assert!(!Path::new(r"\\server").has_invalid_chars());
+        assert!(!Path::new(r"\\server\share").has_invalid_chars());
+        assert!(!Path::new(r"\\server\share\dir").has_invalid_chars());
+        assert!(!Path::new(r"\\?\").has_invalid_chars());
+        assert!(!Path::new(r"\\?\foo").has_invalid_chars());
+        assert!(!Path::new(r"\\?\foo\bar").has_invalid_chars());
+        assert!(!Path::new(r"\\?\UNC\server\share\dir").has_invalid_chars());
+        assert!(!Path::new(r"\\?\UNC\foo").has_invalid_chars());
+        assert!(!Path::new(r"\\?\C:\").has_invalid_chars());
+        assert!(!Path::new(r"\\?\C:\dir").has_invalid_chars());
+        assert!(!Path::new(r"\\.\COM42").has_invalid_chars());
+    }
 
     #[test]
     fn is_longer_than_wide() {

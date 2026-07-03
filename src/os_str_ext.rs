@@ -5,16 +5,16 @@ use std::{
 use windows::core::PWSTR;
 
 pub(crate) trait OsStrExt {
-    fn has_win_invalid_chars(&self) -> bool;
+    fn has_invalid_path_chars(&self) -> bool;
     fn is_longer_than_wide(&self, max: u32) -> bool;
     fn to_wide_vec_with_nul(&self) -> Vec<u16>;
 }
 
 impl OsStrExt for OsStr {
-    fn has_win_invalid_chars(&self) -> bool {
+    fn has_invalid_path_chars(&self) -> bool {
         self.as_encoded_bytes()
             .iter()
-            .any(|&ch| is_win_invalid_path_char(ch))
+            .any(|&ch| is_invalid_path_char(ch))
     }
 
     fn is_longer_than_wide(&self, mut max: u32) -> bool {
@@ -38,7 +38,7 @@ impl OsStrExt for OsStr {
 /// '/' and '\\' are excluded, as this function is for a path, not a file name.
 ///
 /// [Naming Conventions]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#naming-conventions
-fn is_win_invalid_path_char(ch: u8) -> bool {
+fn is_invalid_path_char(ch: u8) -> bool {
     ch == b'<' || ch == b'>' || ch == b':' || ch == b'"' || ch == b'|' || ch == b'?' || ch == b'*'
 }
 

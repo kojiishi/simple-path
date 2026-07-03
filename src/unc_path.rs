@@ -1,7 +1,6 @@
-use crate::PathExt;
 use std::{
     ffi::{OsStr, OsString},
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
 };
 
 /// Represents a Windows UNC path,
@@ -83,15 +82,6 @@ impl<'a> UncPath<'a> {
             .strip_prefix(Self::FILE_NAMESPACE_PREFIX)
     }
 
-    fn as_file_namespace_stripped_os_str(&self) -> Option<&OsStr> {
-        self.as_file_namespace_stripped_encoded_bytes()
-            .map(|bytes| unsafe { OsStr::from_encoded_bytes_unchecked(bytes) })
-    }
-
-    fn as_file_namespace_stripped_path(&self) -> Option<&Path> {
-        self.as_file_namespace_stripped_os_str().map(Path::new)
-    }
-
     /// True if it starts with `\\?\UNC\`.
     pub(crate) fn is_file_namespace_unc(&self) -> bool {
         if let Some(stripped) = self.as_file_namespace_stripped_encoded_bytes() {
@@ -113,20 +103,7 @@ impl<'a> UncPath<'a> {
     fn starts_with_unc_keyword_and_separator(str: &[u8]) -> bool {
         str.len() > Self::UNC_KEYWORD.len()
             && str[..Self::UNC_KEYWORD.len()].eq_ignore_ascii_case(Self::UNC_KEYWORD)
-            && str[Self::UNC_KEYWORD.len()] == b'\\'
-    }
-
-    pub(crate) fn has_invalid_chars(&self) -> bool {
-        if let Some(file_ns_stripped) = self.as_file_namespace_stripped_path() {
-            let mut components = file_ns_stripped.components();
-            return match components.next() {
-                None => false,
-                // Skip `Prefix`; e.g., `\\?\C:`.
-                Some(Component::Prefix(_)) => components.as_path().has_win_invalid_chars(),
-                _ => file_ns_stripped.has_win_invalid_chars(),
-            };
-        }
-        self.path().has_win_invalid_chars()
+            && std::path::is_separator(str[Self::UNC_KEYWORD.len()] as char)
     }
 
     /// Convert `\\?\UNC\` to `\\`.
@@ -200,19 +177,6 @@ mod tests {
         assert!(!from_str(r"\\?\UNC").is_file_namespace_unc());
         assert!(!from_str(r"\\?\UNCD\").is_file_namespace_unc());
         assert!(!from_str(r"\\?\server\share\dir").is_file_namespace_unc());
-    }
-
-    #[test]
-    fn has_invalid_chars() {
-        assert!(!from_str(r"\\?\UNC\foo").has_invalid_chars());
-        assert!(!from_str(r"\\?\C:\").has_invalid_chars());
-        assert!(!from_str(r"\\?\C:\foo").has_invalid_chars());
-
-        assert!(from_str(r"\\?\UNC\foo:").has_invalid_chars());
-        assert!(from_str(r"\\?\UNC\foo>").has_invalid_chars());
-        assert!(from_str(r"\\?\C:\foo:").has_invalid_chars());
-        assert!(from_str(r"\\?\:\foo").has_invalid_chars());
-        assert!(from_str(r"\\?\>\foo").has_invalid_chars());
     }
 
     #[test]
