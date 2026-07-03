@@ -33,7 +33,7 @@ pub(crate) use os_str_ext::{OsStrExt, WinStrExt};
 pub(crate) use path_ext::PathExt;
 pub use simple_path::SimplePath;
 #[cfg(windows)]
-pub(crate) use unc_path::Win32FileNamespacePath;
+pub(crate) use unc_path::UncPath;
 #[cfg(windows)]
 pub(crate) use volume::Volumes;
 

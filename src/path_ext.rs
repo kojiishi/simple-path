@@ -1,10 +1,12 @@
 use crate::OsStrExt;
 use std::path::{Component, Path, StripPrefixError};
+use windows::Win32::Foundation::MAX_PATH;
 
 pub(crate) trait PathExt {
     fn has_win_invalid_chars(&self) -> bool;
 
     fn is_longer_than_wide(&self, max: u32) -> bool;
+    fn is_longer_than_win_max_path(&self) -> bool;
     fn to_wide_vec_with_nul(&self) -> Vec<u16>;
 
     fn strip_prefix_fix(&self, base: impl AsRef<Path>) -> Result<&Path, StripPrefixError>;
@@ -18,6 +20,10 @@ impl PathExt for Path {
 
     fn is_longer_than_wide(&self, max: u32) -> bool {
         self.as_os_str().is_longer_than_wide(max)
+    }
+
+    fn is_longer_than_win_max_path(&self) -> bool {
+        self.is_longer_than_wide(MAX_PATH)
     }
 
     fn to_wide_vec_with_nul(&self) -> Vec<u16> {

@@ -1,4 +1,4 @@
-use crate::WinStrExt;
+use crate::{UncPath, WinStrExt};
 use std::{
     borrow::Cow,
     ffi::{OsStr, OsString},
@@ -41,10 +41,10 @@ impl NetResource {
         while matches!(bytes.last(), Some(b'\\')) {
             bytes = &bytes[..bytes.len() - 1];
         }
-        if let Some(stripped) = bytes.strip_prefix(br"\\") {
-            let mut path = OsString::from(r"\\?\UNC\");
-            path.push(unsafe { OsStr::from_encoded_bytes_unchecked(stripped) });
-            return Cow::Owned(path);
+        if let Ok(unc) = UncPath::try_from(bytes)
+            && let Some(file_ns) = unc.to_filename_space_unc()
+        {
+            return Cow::Owned(file_ns.into_os_string());
         }
         if bytes.len() != remote.len() {
             remote = unsafe { OsStr::from_encoded_bytes_unchecked(bytes) };
