@@ -19,12 +19,12 @@ such as:
 ```
 The "`\\?\`" prefix is called the [Win32 File Namespaces].
 It has advantages such as long paths,
-and is fine for most modern APIs,
+and works fine for most modern APIs,
 but some programs can't handle them.
 PowerShell and `cmd.exe` are examples of such programs.
 
 The `SimplePath` simplifies network share UNC paths
-so that these programs can handle.
+so that such programs can handle.
 
 | | `C:\dir` | `Z:\x` (network) |
 | --- | --- | --- |
@@ -47,18 +47,18 @@ simplifying the path is not always guaranteed to be safe or equivalent.
 The `SimplePath` simplifies paths
 if all the following conditions are met.
 * The path is prefixed by "`\\?\UNC\`" (not only by "`\\?\`").
-  - Note: other prefixes such as "`\\?\C:`" are simplified by [`dunce`],
-    which is included by default.
-* The path doesn't have any invalid characters
-  defined by the [Naming Conventions].
-* The path is "connected" on the PC.
-  That is,
-  the network share is listed in the File Explorer,
-  or in the list of connections when you run `net use` from the command line.
-  - Note: this condition can be relaxed by [`allow_unknown_unc`].
+* The path doesn't have any invalid characters,
+  as defined by the [Naming Conventions].
 
-The "long paths" (paths longer than 260 characters) are simplified by default.
-You can disable long paths being simplified by [`disallow_long`].
+You can change the following criteria if needed:
+* The "long paths" (paths longer than 260 characters) are simplified by default,
+  as modern environments can often handle them.
+  You can disable long paths being simplified by [`disallow_long`].
+* Enable  [`disallow_unknown_unc`] to restrict simplification to verified paths,
+  providing an extra layer of safety.
+
+Note that other prefixes such as "`\\?\C:`" are simplified by [`dunce`],
+which is included by default.
 
 ## Examples
 
@@ -123,7 +123,7 @@ the `SimplePath` returns without doing anything.
 You can wrap the calls with `#[cfg(windows)]` if you prefer,
 though your programs should build and run fine without doing so.
 
-[`allow_unknown_unc`]: https://docs.rs/simple-path/latest/simple_path/struct.SimplePath.html#structfield.allow_unknown_unc
+[`disallow_unknown_unc`]: https://docs.rs/simple-path/latest/simple_path/struct.SimplePath.html#structfield.disallow_unknown_unc
 [`disallow_long`]: https://docs.rs/simple-path/latest/simple_path/struct.SimplePath.html#structfield.disallow_long
 [`dunce` crate]: https://crates.io/crates/dunce
 [`fs::canonicalize`]: https://doc.rust-lang.org/std/fs/fn.canonicalize.html
