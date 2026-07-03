@@ -26,7 +26,7 @@ impl<'a> TryFrom<&'a Path> for UncPath<'a> {
     type Error = ();
 
     fn try_from(path: &'a Path) -> Result<Self, Self::Error> {
-        if UncPath::is_unc_bytes(path.as_os_str().as_encoded_bytes()) {
+        if UncPath::is_unc(path) {
             return Ok(Self { path });
         }
         Err(())
@@ -49,6 +49,11 @@ impl<'a> UncPath<'a> {
     const UNC_KEYWORD: &'static [u8] = br"UNC";
 
     #[inline]
+    fn is_unc(path: impl AsRef<Path>) -> bool {
+        Self::is_unc_bytes(path.as_ref().as_os_str().as_encoded_bytes())
+    }
+
+    #[inline]
     fn is_unc_bytes(bytes: &[u8]) -> bool {
         bytes.len() >= 2
             && std::path::is_separator(bytes[0] as char)
@@ -56,12 +61,12 @@ impl<'a> UncPath<'a> {
     }
 
     #[inline]
-    fn path(&self) -> &Path {
+    fn as_path(&self) -> &Path {
         self.path
     }
 
     fn as_encoded_bytes(&self) -> &[u8] {
-        self.path().as_os_str().as_encoded_bytes()
+        self.as_path().as_os_str().as_encoded_bytes()
     }
 
     fn as_stripped_encoded_bytes(&self) -> &[u8] {
