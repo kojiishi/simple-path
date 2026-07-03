@@ -1,8 +1,5 @@
-use crate::{UncPath, WinStrExt};
-use std::{
-    borrow::Cow,
-    ffi::{OsStr, OsString},
-};
+use crate::{PathExt, UncPath, WinStrExt};
+use std::{borrow::Cow, ffi::OsString, path::Path};
 use windows::Win32::{
     Foundation::{ERROR_MORE_DATA, ERROR_NO_MORE_ITEMS, HANDLE, NO_ERROR},
     NetworkManagement::WNet::{
@@ -32,24 +29,18 @@ impl NetResource {
         '\0'
     }
 
-    pub(crate) fn remote_canonicalized<'a>(&'a self) -> Cow<'a, OsStr> {
-        Self::normalize_remote(&self.remote)
+    pub(crate) fn remote_canonicalized(&self) -> Cow<'_, Path> {
+        Self::normalize_remote(Path::new(&self.remote))
     }
 
-    fn normalize_remote<'a>(mut remote: &'a OsStr) -> Cow<'a, OsStr> {
-        let mut bytes = remote.as_encoded_bytes();
-        while matches!(bytes.last(), Some(b'\\')) {
-            bytes = &bytes[..bytes.len() - 1];
-        }
-        if let Ok(unc) = UncPath::try_from(bytes)
+    fn normalize_remote<'a>(remote: &'a Path) -> Cow<'a, Path> {
+        let path = remote.trim_trailing_separator();
+        if let Ok(unc) = UncPath::try_from(path)
             && let Some(file_ns) = unc.to_filename_space_unc()
         {
-            return Cow::Owned(file_ns.into_os_string());
+            return Cow::Owned(file_ns);
         }
-        if bytes.len() != remote.len() {
-            remote = unsafe { OsStr::from_encoded_bytes_unchecked(bytes) };
-        }
-        Cow::Borrowed(remote)
+        Cow::Borrowed(path)
     }
 }
 
@@ -177,8 +168,8 @@ mod tests {
             (r"C:\foo\", r"C:\foo"),
         ];
         for (input, expected) in test_cases {
-            let res = NetResource::normalize_remote(OsStr::new(input));
-            assert_eq!(&*res, OsStr::new(expected), "input: {}", input);
+            let res = NetResource::normalize_remote(Path::new(input));
+            assert_eq!(&*res, Path::new(expected), "input: {}", input);
         }
     }
 }
