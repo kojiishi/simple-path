@@ -16,9 +16,9 @@ mod os_str_ext;
 mod path_ext;
 mod simple_path;
 #[cfg(windows)]
-mod volume;
+mod unc_path;
 #[cfg(windows)]
-mod win32_file_namespace_path;
+mod volume;
 
 pub use display::Display;
 #[cfg(windows)]
@@ -33,9 +33,9 @@ pub(crate) use os_str_ext::{OsStrExt, WinStrExt};
 pub(crate) use path_ext::PathExt;
 pub use simple_path::SimplePath;
 #[cfg(windows)]
-pub(crate) use volume::Volumes;
+pub(crate) use unc_path::Win32FileNamespacePath;
 #[cfg(windows)]
-pub(crate) use win32_file_namespace_path::Win32FileNamespacePath;
+pub(crate) use volume::Volumes;
 
 #[cfg(all(test, windows))]
 pub(crate) use volume::TEST_LOG_INIT;
