@@ -84,7 +84,10 @@ pub struct SimplePath {
     /// Initially `false`.
     ///
     /// # Examples
-    ///
+    /// In the following example,
+    /// if the `file.txt` is in a network drive,
+    /// the result is `Z:\dir\file.txt`
+    /// instead of `\\server\share\dir\file.txt`.
     /// ```
     /// # use simple_path::SimplePath;
     /// # fn test() -> std::io::Result<()> {
@@ -94,11 +97,11 @@ pub struct SimplePath {
     /// # Ok(())
     /// # }
     /// ```
-    /// If the `file.txt` is in a network drive,
-    /// the result is `Z:\dir\file.txt`
-    /// instead of `\\server\share\dir\file.txt`.
     ///
-    /// The following code tries to preserve the original form of the `path`.
+    /// The following example tries to preserve the original form of the `path`.
+    /// It determines whether the input `path` is a UNC path or not
+    /// by using [`SimplePath::is_unc`],
+    /// and map to a network drive if it's not a UNC path.
     /// ```
     /// # use simple_path::SimplePath;
     /// # fn test(path: &std::path::Path) -> std::io::Result<()> {
