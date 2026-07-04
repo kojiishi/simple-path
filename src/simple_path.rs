@@ -1,7 +1,7 @@
 #![cfg_attr(not(target_os = "windows"), allow(unused))]
 use crate::Display;
 #[cfg(windows)]
-use crate::{PathExt, UncPath, Volumes};
+use crate::{ErrorExt, PathExt, UncPath, Volumes};
 use std::{
     borrow::Cow,
     fs, io,
@@ -173,7 +173,7 @@ impl SimplePath {
     #[inline]
     pub fn simplify<'a>(&self, path: &'a Path) -> io::Result<Option<Cow<'a, Path>>> {
         #[cfg(windows)]
-        return self._simplify(path).map_err(io_error_from_anyhow);
+        return self._simplify(path).map_err(ErrorExt::into_io_error);
         #[cfg(not(windows))]
         Ok(None)
     }
@@ -232,7 +232,7 @@ impl SimplePath {
     /// Refresh the cached information.
     pub fn refresh() -> io::Result<()> {
         #[cfg(windows)]
-        Volumes::refresh().map_err(io_error_from_anyhow)?;
+        Volumes::refresh().map_err(ErrorExt::into_io_error)?;
         Ok(())
     }
 
@@ -298,13 +298,6 @@ impl SimplePath {
         return PathExt::strip_prefix_fix(path, base);
         #[cfg(not(windows))]
         path.strip_prefix(base)
-    }
-}
-
-fn io_error_from_anyhow(error: anyhow::Error) -> io::Error {
-    match error.downcast::<io::Error>() {
-        Ok(io_error) => io_error,
-        Err(other_error) => io::Error::other(other_error),
     }
 }
 
