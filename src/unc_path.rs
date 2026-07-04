@@ -153,23 +153,35 @@ mod tests {
     use super::*;
 
     #[test]
-    fn try_from() {
-        assert!(UncPath::try_from(r"\\server\share\dir").is_ok());
-        assert!(UncPath::try_from(r"\\?").is_ok());
+    fn is_unc_try_from() {
+        let test_cases = [
+            (r"\\server\share\dir", true),
+            (r"\\?", true),
+            (r"\\?\server\share\dir", true),
+            (r"\\?\C:\", true),
+            (r"\\?\", true),
+            // Forward slashes.
+            (r"//server/share/dir", true),
+            (r"//?", true),
+            (r"//?/server/share/dir", true),
+            (r"//?/C:/", true),
+            (r"//?/", true),
+            // Non-UNC paths.
+            (r"C:\a\b", false),
+            (r"\a\b", false),
+            (r"a\b", false),
+        ];
+        for (str, expect) in test_cases {
+            let path = Path::new(str);
+            let bytes = str.as_bytes();
+            assert_eq!(UncPath::is_unc(path), expect, "input: {str}");
+            assert_eq!(UncPath::is_unc(str), expect, "input: {str}");
+            assert_eq!(UncPath::is_unc_bytes(bytes), expect, "input: {str}");
 
-        assert!(UncPath::try_from(r"\\?\server\share\dir").is_ok());
-        assert!(UncPath::try_from(r"\\?\C:\").is_ok());
-        assert!(UncPath::try_from(r"\\?\").is_ok());
-
-        assert!(UncPath::try_from(r"//server/share/dir").is_ok());
-        assert!(UncPath::try_from(r"//?").is_ok());
-        assert!(UncPath::try_from(r"//?/server/share/dir").is_ok());
-        assert!(UncPath::try_from(r"//?/C:/").is_ok());
-        assert!(UncPath::try_from(r"//?/").is_ok());
-
-        assert!(UncPath::try_from(r"C:\a\b").is_err());
-        assert!(UncPath::try_from(r"\a\b").is_err());
-        assert!(UncPath::try_from(r"a\b").is_err());
+            assert_eq!(UncPath::try_from(path).is_ok(), expect, "input: {str}");
+            assert_eq!(UncPath::try_from(str).is_ok(), expect, "input: {str}");
+            assert_eq!(UncPath::try_from(bytes).is_ok(), expect, "input: {str}");
+        }
     }
 
     fn from_str(str: &str) -> UncPath<'_> {
