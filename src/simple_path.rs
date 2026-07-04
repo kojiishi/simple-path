@@ -50,7 +50,7 @@ pub struct SimplePath {
     /// [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
     pub disallow_long: bool,
 
-    /// Disables simplifications
+    /// Disallow simplifications
     /// if the path is not connected.
     /// Initially `false`.
     ///
@@ -103,7 +103,7 @@ pub struct SimplePath {
     /// # use simple_path::SimplePath;
     /// # fn test(path: &std::path::Path) -> std::io::Result<()> {
     /// SimplePath {
-    ///     map_to_drive: !path.as_os_str().as_encoded_bytes().starts_with(br"\\"),
+    ///     map_to_drive: !SimplePath::is_unc(path),
     ///     ..Default::default()
     /// }.canonicalize(path)?;
     /// # Ok(())
@@ -229,14 +229,14 @@ impl SimplePath {
         Volumes::drive_path(path)
     }
 
-    /// Refreshes the cached information.
+    /// Refresh the cached information.
     pub fn refresh() -> io::Result<()> {
         #[cfg(windows)]
         Volumes::refresh().map_err(io_error_from_anyhow)?;
         Ok(())
     }
 
-    /// Returns an object that implements [`Display`][`core::fmt::Display`]
+    /// Return an object that implements [`Display`][`core::fmt::Display`]
     /// for printing simplified paths.
     ///
     /// # Examples
@@ -254,6 +254,31 @@ impl SimplePath {
         Display::new(self, path)
     }
 
+    /// Return `true` if the given `path` is a UNC path.
+    /// A UNC path starts with a "`\\`" prefix.
+    ///
+    /// Always `false` on non-Windows platforms.
+    ///
+    /// # Examples
+    /// ```
+    /// # use simple_path::SimplePath;
+    /// #[cfg(windows)]
+    /// {
+    ///     assert!(SimplePath::is_unc(r"\\unc"));
+    ///     assert!(SimplePath::is_unc(r"//unc"));
+    ///     assert!(!SimplePath::is_unc(r"\not-unc"));
+    /// }
+    /// assert!(!SimplePath::is_unc("/not-unc"));
+    /// assert!(!SimplePath::is_unc("not-unc"));
+    /// ```
+    #[inline]
+    pub fn is_unc(path: impl AsRef<Path>) -> bool {
+        #[cfg(windows)]
+        return UncPath::is_unc(path);
+        #[cfg(not(windows))]
+        false
+    }
+
     /// A snap-in replacement for [`Path::strip_prefix`]
     /// with a fix for [a leading directory separator "`\`" left for UNC paths
     /// on Windows](https://github.com/rust-lang/rust/issues/155183).
@@ -267,6 +292,7 @@ impl SimplePath {
     /// SimplePath::strip_prefix(path, base)
     /// # }
     /// ```
+    #[inline]
     pub fn strip_prefix(path: &Path, base: impl AsRef<Path>) -> Result<&Path, StripPrefixError> {
         #[cfg(windows)]
         return PathExt::strip_prefix_fix(path, base);
