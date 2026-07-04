@@ -67,13 +67,18 @@ pub struct SimplePath {
     /// Please also see the [safety] note.
     ///
     /// # Examples
+    /// If `\\server\share` is not connected
+    /// (i.e., it's not listed by the `net use` command),
+    /// the following example doesn't simplify the path.
     /// ```
     /// # use simple_path::SimplePath;
     /// # use std::path::Path;
+    /// # fn test() -> std::io::Result<()> {
     /// let path = Path::new(r"\\?\UNC\server\share\dir");
     /// let simple = SimplePath { disallow_unknown_unc: true, ..Default::default() };
-    /// #[cfg(windows)]
-    /// assert!(simple.simplify(path).unwrap().is_none());
+    /// assert!(simple.simplify(path)?.is_none());
+    /// # Ok(())
+    /// # }
     /// ```
     ///
     /// [safety]: https://github.com/kojiishi/simple-path#safety-and-equivalence
