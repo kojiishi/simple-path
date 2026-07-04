@@ -155,18 +155,23 @@ mod tests {
     #[test]
     fn is_unc_try_from() {
         let test_cases = [
-            (r"\\server\share\dir", true),
+            (r"\\", true),
             (r"\\?", true),
+            (r"\\?\", true),
+            (r"\\server\share\dir", true),
             (r"\\?\server\share\dir", true),
             (r"\\?\C:\", true),
-            (r"\\?\", true),
             // Forward slashes.
-            (r"//server/share/dir", true),
-            (r"//?", true),
-            (r"//?/server/share/dir", true),
-            (r"//?/C:/", true),
-            (r"//?/", true),
+            ("//", true),
+            ("//?", true),
+            ("//?/", true),
+            ("//server/share/dir", true),
+            ("//?/server/share/dir", true),
+            ("//?/C:/", true),
             // Non-UNC paths.
+            ("", false),
+            ("/", false),
+            (r"\", false),
             (r"C:\a\b", false),
             (r"\a\b", false),
             (r"a\b", false),
