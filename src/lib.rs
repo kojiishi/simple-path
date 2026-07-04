@@ -7,6 +7,8 @@ mod display;
 #[cfg(windows)]
 mod drive_path;
 #[cfg(windows)]
+mod error_ext;
+#[cfg(windows)]
 mod logical_drive;
 #[cfg(windows)]
 mod net_resource;
@@ -23,6 +25,8 @@ mod volume;
 pub use display::Display;
 #[cfg(windows)]
 pub(crate) use drive_path::DrivePath;
+#[cfg(windows)]
+pub(crate) use error_ext::ErrorExt;
 #[cfg(windows)]
 pub(crate) use logical_drive::LogicalDrive;
 #[cfg(windows)]
