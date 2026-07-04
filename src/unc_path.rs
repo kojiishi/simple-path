@@ -49,7 +49,7 @@ impl<'a> UncPath<'a> {
     const UNC_KEYWORD: &'static [u8] = br"UNC";
 
     #[inline]
-    fn is_unc(path: impl AsRef<Path>) -> bool {
+    pub(crate) fn is_unc(path: impl AsRef<Path>) -> bool {
         Self::is_unc_bytes(path.as_ref().as_os_str().as_encoded_bytes())
     }
 
