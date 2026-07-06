@@ -18,6 +18,10 @@ impl OsStrExt for OsStr {
     }
 
     fn is_longer_than_wide(&self, mut max: u32) -> bool {
+        debug_assert!(self.len() >= self.encode_wide().count());
+        if self.len() <= max as usize {
+            return false;
+        }
         for _ in self.encode_wide() {
             if max == 0 {
                 return true;
