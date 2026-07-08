@@ -53,7 +53,7 @@ if all the following conditions are met.
 You can change the following criteria if needed:
 * The "long paths" (paths longer than 260 characters) are simplified by default,
   as modern environments can often handle them.
-  You can disable long paths being simplified by [`disallow_long`].
+  You can disable simplifying long paths by [`disallow_long`].
 * Enable  [`disallow_unknown_unc`] to restrict simplification to verified paths,
   providing an extra layer of safety.
 
@@ -107,7 +107,7 @@ println!("{}", simplified.display());
 [`dunce`]: #dunce
 
 The `SimplePath` calls the [`dunce` crate]
-to normalize some other cases, such as:
+to normalize some other cases by default, such as:
 `\\?\C:\foo` to `C:\foo`.
 You can skip the [`dunce` crate] simplification
 by the [`skip_dunce`] option.
