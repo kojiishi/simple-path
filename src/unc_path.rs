@@ -61,7 +61,7 @@ impl<'a> UncPath<'a> {
     }
 
     #[inline]
-    fn as_path(&self) -> &Path {
+    pub(crate) fn as_path(&self) -> &Path {
         self.path
     }
 
