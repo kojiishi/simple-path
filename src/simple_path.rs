@@ -181,20 +181,38 @@ impl SimplePath {
     #[inline]
     pub fn simplify<'a>(&self, path: &'a Path) -> io::Result<Option<Cow<'a, Path>>> {
         #[cfg(windows)]
-        return self._simplify(path).map_err(ErrorExt::into_io_error);
+        return self.simplify_win(path).map_err(ErrorExt::into_io_error);
         #[cfg(not(windows))]
         Ok(None)
     }
 
     #[cfg(windows)]
-    fn _simplify<'a>(&self, path: &'a Path) -> anyhow::Result<Option<Cow<'a, Path>>> {
-        // If it starts with the `\\?\UNC\` prefix.
+    fn simplify_win<'a>(&self, path: &'a Path) -> anyhow::Result<Option<Cow<'a, Path>>> {
+        // If it starts with the `\\` prefix.
         if let Ok(unc) = UncPath::try_from(path)
-            && unc.is_file_namespace_unc()
+            && let Some(simplified) = self.simplify_unc(&unc)?
         {
+            return Ok(Some(simplified));
+        }
+
+        // Try `dunce::simplified`.
+        if !self.skip_dunce {
+            let simplified = dunce::simplified(path);
+            if !std::ptr::eq(path, simplified) {
+                return Ok(Some(Cow::Borrowed(simplified)));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Try to simplify a Windows UNC path (`\\`).
+    #[cfg(windows)]
+    fn simplify_unc<'a>(&self, unc: &UncPath<'a>) -> anyhow::Result<Option<Cow<'a, Path>>> {
+        // If it starts with the `\\?\UNC\` prefix.
+        if unc.is_file_namespace_unc() {
             // Try mapped network drives.
             let drive_path = if self.disallow_unknown_unc || self.map_to_drive {
-                self.drive_path(path)?
+                self.drive_path(unc.as_path())?
             } else {
                 None
             };
@@ -214,14 +232,6 @@ impl SimplePath {
                 && (!self.disallow_long || !short_unc.is_longer_than_win_max_path())
             {
                 return Ok(Some(Cow::Owned(short_unc)));
-            }
-        }
-
-        // Try `dunce::simplified`.
-        if !self.skip_dunce {
-            let simplified = dunce::simplified(path);
-            if !std::ptr::eq(path, simplified) {
-                return Ok(Some(Cow::Borrowed(simplified)));
             }
         }
         Ok(None)
