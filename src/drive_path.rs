@@ -21,6 +21,10 @@ impl<'a> DrivePath<'a> {
         self.path.has_invalid_chars()
     }
 
+    pub(crate) fn has_reserved_names(&self) -> bool {
+        self.path.has_reserved_names()
+    }
+
     pub(crate) fn is_longer_than_max_path(&self) -> bool {
         const PREFIX_LEN: u32 = r"A:\".len() as u32;
         self.path.is_longer_than_wide(MAX_PATH - PREFIX_LEN)

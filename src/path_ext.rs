@@ -8,6 +8,7 @@ use windows::Win32::Foundation::MAX_PATH;
 
 pub(crate) trait PathExt {
     fn has_invalid_chars(&self) -> bool;
+    fn has_reserved_names(&self) -> bool;
 
     fn is_longer_than_wide(&self, max: u32) -> bool;
     fn is_longer_than_win_max_path(&self) -> bool;
@@ -37,6 +38,16 @@ impl PathExt for Path {
             },
             _ => self.as_os_str().has_invalid_path_chars(),
         }
+    }
+
+    fn has_reserved_names(&self) -> bool {
+        self.components().any(|component| {
+            if let Component::Normal(os_str) = component {
+                os_str.is_reserved_name()
+            } else {
+                false
+            }
+        })
     }
 
     fn is_longer_than_wide(&self, max: u32) -> bool {
@@ -123,6 +134,34 @@ mod tests {
         assert!(!Path::new(r"\\?\C:\").has_invalid_chars());
         assert!(!Path::new(r"\\?\C:\dir").has_invalid_chars());
         assert!(!Path::new(r"\\.\COM42").has_invalid_chars());
+    }
+
+    #[test]
+    fn has_reserved_names() {
+        assert!(Path::new("CON").has_reserved_names());
+        assert!(Path::new("con").has_reserved_names());
+        assert!(Path::new("PRN.txt").has_reserved_names());
+        assert!(Path::new("aux.tar.gz").has_reserved_names());
+        assert!(Path::new("NUL").has_reserved_names());
+        assert!(Path::new("COM1").has_reserved_names());
+        assert!(Path::new("com9").has_reserved_names());
+        assert!(Path::new("LPT1").has_reserved_names());
+        assert!(Path::new("lpt9").has_reserved_names());
+        assert!(Path::new("COM¹").has_reserved_names());
+        assert!(Path::new("lpt³").has_reserved_names());
+        assert!(Path::new("con ").has_reserved_names());
+        assert!(Path::new("con.").has_reserved_names());
+        assert!(Path::new("con.txt. . ").has_reserved_names());
+        assert!(Path::new(r"C:\foo\CON.txt").has_reserved_names());
+        assert!(Path::new(r"\\server\share\COM1").has_reserved_names());
+
+        assert!(!Path::new("").has_reserved_names());
+        assert!(!Path::new("acon").has_reserved_names());
+        assert!(!Path::new("conb").has_reserved_names());
+        assert!(!Path::new("COM0").has_reserved_names());
+        assert!(!Path::new("LPT0").has_reserved_names());
+        assert!(!Path::new(".con").has_reserved_names());
+        assert!(!Path::new("con1").has_reserved_names());
     }
 
     #[test]
