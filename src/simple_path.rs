@@ -220,6 +220,7 @@ impl SimplePath {
                 && let Some(drive_path) = &drive_path
                 && drive_path.has_drive()
                 && !drive_path.has_invalid_chars()
+                && !drive_path.has_reserved_names()
                 && (!self.disallow_long || !drive_path.is_longer_than_max_path())
             {
                 return Ok(Some(Cow::Owned(drive_path.to_path_buf())));
@@ -229,6 +230,7 @@ impl SimplePath {
             if (!self.disallow_unknown_unc || drive_path.is_some())
                 && let Some(short_unc) = unc.to_short_unc()
                 && !short_unc.has_invalid_chars()
+                && !short_unc.has_reserved_names()
                 && (!self.disallow_long || !short_unc.is_longer_than_win_max_path())
             {
                 return Ok(Some(Cow::Owned(short_unc)));
@@ -427,6 +429,24 @@ mod tests {
         assert_eq!(simple.simplify(Path::new(r"\\.\COM1:"))?, None);
         simple.skip_dunce = true;
         assert_eq!(simple.simplify(Path::new(r"\\?\C:\foo"))?, None);
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn simplify_reserved_names() -> anyhow::Result<()> {
+        let mut simple = SimplePath::mock();
+        let path_reserved_unc = Path::new(r"\\?\UNC\server\share\CON");
+        let path_reserved_unc_ext = Path::new(r"\\?\UNC\server\share\CON.txt");
+        let path_reserved_drive = Path::new(r"\\?\C:\foo\CON.txt");
+
+        assert_eq!(simple.simplify(path_reserved_unc)?, None);
+        assert_eq!(simple.simplify(path_reserved_unc_ext)?, None);
+        assert_eq!(simple.simplify(path_reserved_drive)?, None);
+
+        simple.map_to_drive = true;
+        assert_eq!(simple.simplify(path_reserved_unc)?, None);
+        assert_eq!(simple.simplify(path_reserved_unc_ext)?, None);
         Ok(())
     }
 }
