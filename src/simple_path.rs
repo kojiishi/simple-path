@@ -208,8 +208,9 @@ impl SimplePath {
     /// Try to simplify a Windows UNC path (`\\`).
     #[cfg(windows)]
     fn simplify_unc<'a>(&self, unc: &UncPath<'a>) -> anyhow::Result<Option<Cow<'a, Path>>> {
-        // If it starts with the `\\?\UNC\` prefix.
+        let mut should_try_short_unc = true;
         if unc.is_file_namespace_unc() {
+            // If it starts with the `\\?\UNC\`.
             // Try mapped network drives.
             let drive_path = if self.disallow_unknown_unc || self.map_to_drive {
                 self.drive_path(unc.as_path())?
@@ -227,14 +228,15 @@ impl SimplePath {
             }
 
             // Try short UNC (`\\server\share`).
-            if (!self.disallow_unknown_unc || drive_path.is_some())
-                && let Some(short_unc) = unc.to_short_unc()
-                && !short_unc.has_invalid_chars()
-                && !short_unc.has_reserved_names()
-                && (!self.disallow_long || !short_unc.is_longer_than_win_max_path())
-            {
-                return Ok(Some(Cow::Owned(short_unc)));
-            }
+            should_try_short_unc = !self.disallow_unknown_unc || drive_path.is_some();
+        }
+        if should_try_short_unc
+            && let Some(short_unc) = unc.to_short_unc()
+            && !short_unc.has_invalid_chars()
+            && !short_unc.has_reserved_names()
+            && (!self.disallow_long || !short_unc.is_longer_than_win_max_path())
+        {
+            return Ok(Some(short_unc));
         }
         Ok(None)
     }
@@ -336,6 +338,22 @@ mod tests {
 
     #[cfg(windows)]
     #[test]
+    fn simplify_filename_space_drive() -> anyhow::Result<()> {
+        let mut simple = SimplePath::mock();
+        simple.skip_dunce = true;
+        assert_eq!(
+            simple.simplify(Path::new(r"\\?\C:"))?,
+            Some(Cow::Borrowed(Path::new(r"C:")))
+        );
+        assert_eq!(
+            simple.simplify(Path::new(r"\\?\C:\foo"))?,
+            Some(Cow::Borrowed(Path::new(r"C:\foo")))
+        );
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
     fn simplify_drive_unc() {
         let mut simple = SimplePath::mock();
         let path = Path::new(r"\\?\UNC\server\share\foo");
@@ -358,26 +376,6 @@ mod tests {
             simple.simplify(path2).unwrap(),
             Some(Cow::Owned(PathBuf::from(r"Z:\foo2")))
         );
-    }
-
-    #[cfg(windows)]
-    #[test]
-    fn simplify_dunce() {
-        let simple = SimplePath::default();
-        assert_eq!(
-            simple.simplify(Path::new(r"\\?\C:\foo")).unwrap(),
-            Some(Cow::Borrowed(Path::new(r"C:\foo")))
-        );
-    }
-
-    #[cfg(windows)]
-    #[test]
-    fn simplify_dunce_skip() {
-        let simple = SimplePath {
-            skip_dunce: true,
-            ..Default::default()
-        };
-        assert_eq!(simple.simplify(Path::new(r"\\?\C:\foo")).unwrap(), None);
     }
 
     #[cfg(windows)]
@@ -427,8 +425,6 @@ mod tests {
 
         // `disallow_unknown_unc` should simplify only for "`\\?\UNC\`".
         assert_eq!(simple.simplify(Path::new(r"\\.\COM1:"))?, None);
-        simple.skip_dunce = true;
-        assert_eq!(simple.simplify(Path::new(r"\\?\C:\foo"))?, None);
         Ok(())
     }
 
