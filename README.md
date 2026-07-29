@@ -107,8 +107,7 @@ println!("{}", simplified.display());
 [`dunce`]: #dunce
 
 The `SimplePath` calls the [`dunce` crate]
-to normalize some other cases by default, such as:
-`\\?\C:\foo` to `C:\foo`.
+to normalize some other cases by default.
 You can skip the [`dunce` crate] simplification
 by the [`skip_dunce`] option.
 ```rust
