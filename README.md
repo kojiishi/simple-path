@@ -46,8 +46,9 @@ simplifying the path is not always guaranteed to be safe or equivalent.
 
 The `SimplePath` simplifies paths
 if all the following conditions are met.
-* The path is prefixed by "`\\?\UNC\`" (not only by "`\\?\`").
-* The path doesn't have any invalid characters,
+* The path is prefixed by "`\\?\UNC\`" (not only by "`\\?\`"),
+  or "`\\?\C:`" where `C` is an ASCII alphabet.
+* The path doesn't have any invalid characters or reserved names,
   as defined by the [Naming Conventions].
 
 You can change the following criteria if needed:
