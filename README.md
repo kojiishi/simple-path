@@ -46,8 +46,8 @@ simplifying the path is not always guaranteed to be safe or equivalent.
 
 The `SimplePath` simplifies paths
 if all the following conditions are met.
-* The path is prefixed by "`\\?\UNC\`" (not only by "`\\?\`"),
-  or "`\\?\C:`" where `C` is an ASCII alphabet.
+* The path is prefixed by "`\\?\UNC\`",
+  or "`\\?\C:`" where `C` is an ASCII alphabet letter.
 * The path doesn't have any invalid characters or reserved names,
   as defined by the [Naming Conventions].
 
@@ -57,9 +57,6 @@ You can change the following criteria if needed:
   You can disable simplifying long paths by [`disallow_long`].
 * Enable  [`disallow_unknown_unc`] to restrict simplification to verified paths,
   providing an extra layer of safety.
-
-Note that other prefixes such as "`\\?\C:`" are simplified by [`dunce`],
-which is included by default.
 
 ## Examples
 
