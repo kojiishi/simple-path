@@ -57,7 +57,7 @@ vars:
   CLIPPY: '-- -Dwarnings'
   DOC: --no-deps --workspace --document-private-items
   FEATURE: ''
-  FEATURES: ['']
+  FEATURES: ['', '--all-features']
   FMT: '--all'
   RUSTDOC: -Dwarnings
   TARGET: '--all-targets'

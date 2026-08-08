@@ -123,6 +123,8 @@ pub struct SimplePath {
     /// Initially `false`.
     ///
     /// [`dunce`]: https://crates.io/crates/dunce
+    #[cfg(feature = "dunce")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "dunce")))]
     pub skip_dunce: bool,
 
     /// It is highly recommended to always use `, ..Default::default()`.
@@ -196,6 +198,7 @@ impl SimplePath {
         }
 
         // Try `dunce::simplified`.
+        #[cfg(feature = "dunce")]
         if !self.skip_dunce {
             let simplified = dunce::simplified(path);
             if !std::ptr::eq(path, simplified) {
@@ -338,9 +341,13 @@ mod tests {
 
     #[cfg(windows)]
     #[test]
+    #[allow(unused_mut)]
     fn simplify_filename_space_drive() -> anyhow::Result<()> {
         let mut simple = SimplePath::mock();
-        simple.skip_dunce = true;
+        #[cfg(feature = "dunce")]
+        {
+            simple.skip_dunce = true;
+        }
         assert_eq!(
             simple.simplify(Path::new(r"\\?\C:"))?,
             Some(Cow::Borrowed(Path::new(r"C:")))
