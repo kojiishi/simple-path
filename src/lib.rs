@@ -1,3 +1,4 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 //! Please see the [README] for a high-level overview,
 //! and the [`SimplePath`] struct for the detailed features.
 //!

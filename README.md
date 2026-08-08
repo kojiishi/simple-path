@@ -104,10 +104,18 @@ println!("{}", simplified.display());
 ## Dunce
 [`dunce`]: #dunce
 
-The `SimplePath` calls the [`dunce` crate]
-to normalize some other cases by default.
-You can skip the [`dunce` crate] simplification
-by the [`skip_dunce`] option.
+The [`dunce` crate] provides similar functionalities.
+The `SimplePath` can call the [`dunce` crate]
+in addition to its own simplifications.
+
+This is an optional feature.
+To enable it, opt in to the `dunce` feature:
+```shell
+cargo add simple-path --features dunce
+```
+
+When the `dunce` feature is enabled,
+you can skip the [`dunce` crate] simplification by the [`skip_dunce`] option:
 ```rust
 let simple = SimplePath { skip_dunce: true, ..Default::default() };
 ```
