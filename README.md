@@ -23,7 +23,8 @@ and works fine for most modern APIs,
 but some programs can't handle them.
 PowerShell and `cmd.exe` are examples of such programs.
 
-The `SimplePath` simplifies network share UNC paths
+The `SimplePath` simplifies paths with the "`\\?\`" prefix
+when it is possible and [safe to so][safety],
 so that such programs can handle.
 
 | | `C:\dir` | `Z:\x` (network) |
@@ -112,7 +113,7 @@ Technically speaking,
 since the "`\\?\`" prefix ([Win32 File Namespaces])
 disables all string parsing and
 sends the following string directly to the file system,
-simplifying the path is not always guaranteed to be safe or equivalent.
+simplifying the path is not always guaranteed to be safe and equivalent.
 
 The `SimplePath` simplifies paths
 if all the following conditions are met.
