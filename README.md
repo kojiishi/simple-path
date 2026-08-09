@@ -82,7 +82,6 @@ println!("{}", simplified.display());
 ## Dunce
 [`dunce`]: #dunce
 
-The [`dunce` crate] provides similar functionalities.
 The `SimplePath` can call the [`dunce` crate]
 in addition to its own simplifications.
 
