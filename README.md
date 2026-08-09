@@ -24,7 +24,7 @@ but some programs can't handle them.
 PowerShell and `cmd.exe` are examples of such programs.
 
 The `SimplePath` simplifies paths with the "`\\?\`" prefix
-when it is possible and [safe to do so][safety],
+where it is possible and [safe][safety],
 so that such programs can handle.
 
 | | `C:\dir` | `Z:\x` (network) |
