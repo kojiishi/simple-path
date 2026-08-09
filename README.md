@@ -35,29 +35,6 @@ so that such programs can handle.
 Please see the [library documentation][docs] for more details,
 and [releases] for the change history.
 
-## Safety and Equivalence
-[safety]: #safety-and-equivalence
-
-Technically speaking,
-since the "`\\?\`" prefix ([Win32 File Namespaces])
-disables all string parsing and
-sends the following string directly to the file system,
-simplifying the path is not always guaranteed to be safe or equivalent.
-
-The `SimplePath` simplifies paths
-if all the following conditions are met.
-* The path is prefixed by "`\\?\UNC\`",
-  or "`\\?\C:`" where `C` is an ASCII alphabet letter.
-* The path doesn't have any invalid characters or reserved names,
-  as defined by the [Naming Conventions].
-
-You can change the following criteria if needed:
-* The "long paths" (paths longer than 260 characters) are simplified by default,
-  as modern environments can often handle them.
-  You can disable simplifying long paths by [`disallow_long`].
-* Enable  [`disallow_unknown_unc`] to restrict simplification to verified paths,
-  providing an extra layer of safety.
-
 ## Examples
 
 When your PC has a network share on the `Z:` drive,
@@ -127,6 +104,29 @@ the `SimplePath` returns without doing anything.
 
 You can wrap the calls with `#[cfg(windows)]` if you prefer,
 though your programs should build and run fine without doing so.
+
+## Safety and Equivalence
+[safety]: #safety-and-equivalence
+
+Technically speaking,
+since the "`\\?\`" prefix ([Win32 File Namespaces])
+disables all string parsing and
+sends the following string directly to the file system,
+simplifying the path is not always guaranteed to be safe or equivalent.
+
+The `SimplePath` simplifies paths
+if all the following conditions are met.
+* The path is prefixed by "`\\?\UNC\`",
+  or "`\\?\C:`" where `C` is an ASCII alphabet letter.
+* The path doesn't have any invalid characters or reserved names,
+  as defined by the [Naming Conventions].
+
+You can change the following criteria if needed:
+* The "long paths" (paths longer than 260 characters) are simplified by default,
+  as modern environments can often handle them.
+  You can disable simplifying long paths by [`disallow_long`].
+* Enable  [`disallow_unknown_unc`] to restrict simplification to verified paths,
+  providing an extra layer of safety.
 
 [`disallow_unknown_unc`]: https://docs.rs/simple-path/latest/simple_path/struct.SimplePath.html#structfield.disallow_unknown_unc
 [`disallow_long`]: https://docs.rs/simple-path/latest/simple_path/struct.SimplePath.html#structfield.disallow_long
