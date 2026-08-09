@@ -92,12 +92,6 @@ To enable it, opt in to the `dunce` feature:
 cargo add simple-path --features dunce
 ```
 
-When the `dunce` feature is enabled,
-you can skip the [`dunce` crate] simplification by the [`skip_dunce`] option:
-```rust
-let simple = SimplePath { skip_dunce: true, ..Default::default() };
-```
-
 ## Other Platforms
 
 On other platforms than Windows,
@@ -136,5 +130,4 @@ You can change the following criteria if needed:
 [`map_to_drive`]: https://docs.rs/simple-path/latest/simple_path/struct.SimplePath.html#structfield.map_to_drive
 [Naming Conventions]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#naming-conventions
 [releases]: https://github.com/kojiishi/simple-path/releases
-[`skip_dunce`]: https://docs.rs/simple-path/latest/simple_path/struct.SimplePath.html#structfield.skip_dunce
 [Win32 File Namespaces]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
